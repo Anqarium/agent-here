@@ -473,9 +473,11 @@ static bool HasToken(const std::wstring& lower, std::initializer_list<const wcha
     return false;
 }
 
-// Command line that starts claude (with `args`, e.g. " --resume <id>") inside the profile's shell;
-// empty for an unknown shell.
-static std::wstring ShellWithClaude(const Profile& p, const std::wstring& claude, const std::wstring& args) {
+// Command line that starts claude (with `args`, e.g. " --resume <id>", and an optional start
+// `prompt`) inside the profile's shell; empty for an unknown shell. The prompt is quoted for the
+// shell, so it must not contain quotes (see StartPrompt).
+static std::wstring ShellWithClaude(const Profile& p, const std::wstring& claude, const std::wstring& args,
+                                    const std::wstring& prompt) {
     std::wstring cmd = p.commandline;
     if (cmd.empty() && p.source == L"Windows.Terminal.PowershellCore") {
         wchar_t buf[MAX_PATH];
@@ -508,11 +510,17 @@ static std::wstring ShellWithClaude(const Profile& p, const std::wstring& claude
             if (c == L'\'') quoted += L'\'';
             quoted += c;
         }
-        return cmd + L" -NoExit -Command \"& '" + quoted + L"'" + args + L"\"";
+        std::wstring psArgs = args;
+        if (!prompt.empty()) psArgs += L" '" + prompt + L"'";
+        return cmd + L" -NoExit -Command \"& '" + quoted + L"'" + psArgs + L"\"";
     }
     if (base == L"cmd.exe" || base == L"cmd") {
         if (HasToken(lower, {L"/c", L"/k"})) return L"";
-        return cmd + L" /k \"" + claude + L"\"" + args;
+        // cmd strips the first and last quote of a /k line that holds more than two quotes, so the
+        // whole command gets one extra pair.
+        std::wstring line = L"\"" + claude + L"\"" + args;
+        if (!prompt.empty()) line += L" \"" + prompt + L"\"";
+        return cmd + L" /k \"" + line + L"\"";
     }
     return L"";
 }
@@ -527,11 +535,47 @@ static std::wstring EscapeWt(const std::wstring& s) {
     return o;
 }
 
-// Opens claude in `folder`; a non-empty resumeId resumes that session instead of starting a new one.
+// Turkish or English text for the start prompt: Claude Code's own `language` setting in
+// ~/.claude/settings.json, else the Windows display language.
+static bool PromptInTurkish() {
+    bool tr = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_TURKISH;
+    std::wstring path = EnvPath(L"USERPROFILE", L"\\.claude\\settings.json");
+    std::wstring text;
+    if (path.empty() || !ReadUtf8File(path, text)) return tr;
+    try {
+        using namespace winrt::Windows::Data::Json;
+        JsonObject root = JsonObject::Parse(StripJsonc(text));
+        std::wstring lang = Lower(std::wstring(root.GetNamedString(L"language", L"")));
+        if (!lang.empty())
+            return lang == L"tr" || lang.find(L"turk") != std::wstring::npos || lang.find(L"türk") != std::wstring::npos;
+    } catch (...) {
+        // Broken settings file or a non-string value: fall back to the Windows language.
+    }
+    return tr;
+}
+
+// First message of a new terminal session, so Claude greets with a short project summary instead of
+// waiting for input. It goes through three layers of quoting (wt, the shell, claude): no quotes,
+// semicolons or shell metacharacters.
+static std::wstring StartPrompt() {
+    if (PromptInTurkish())
+        return L"Bu klasörde yeni bir oturum başlıyor. Önce varsa git durumuna ve son commit geçmişine "
+               L"kısaca bak, varsa CLAUDE.md veya README.md dosyasını oku. Sonra projenin nerede olduğunu ve "
+               L"neyin açık kaldığını kısa bir özetle anlat ve ne üzerinde çalışmak istediğimi sor. "
+               L"Şimdilik hiçbir dosyayı değiştirme.";
+    return L"A new session is starting in this folder. First take a brief look at the git status and recent "
+           L"commits if there are any, and read CLAUDE.md or README.md if present. Then give me a short summary "
+           L"of where the project stands and what looks open, and ask what I want to work on. "
+           L"Do not modify any files yet.";
+}
+
+// Opens claude in `folder`; a non-empty resumeId resumes that session instead of starting a new one
+// (a new session starts with StartPrompt).
 static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& resumeId) {
     std::wstring claude = ClaudeCliPath();
     if (claude.empty()) return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     std::wstring claudeArgs = resumeId.empty() ? std::wstring() : L" --resume " + resumeId;
+    std::wstring prompt = resumeId.empty() ? StartPrompt() : std::wstring();
 
     std::wstring wt = EnvPath(L"LOCALAPPDATA", L"\\Microsoft\\WindowsApps\\wt.exe");
     if (!wt.empty() && FileExists(wt)) {
@@ -546,9 +590,12 @@ static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& re
         std::wstring inner;
         if (DefaultProfile(profile)) {
             args = L"-p \"" + profile.id + L"\" ";
-            inner = ShellWithClaude(profile, claude, claudeArgs);
+            inner = ShellWithClaude(profile, claude, claudeArgs, prompt);
         }
-        if (inner.empty()) inner = L"\"" + claude + L"\"" + claudeArgs;
+        if (inner.empty()) {
+            inner = L"\"" + claude + L"\"" + claudeArgs;
+            if (!prompt.empty()) inner += L" \"" + prompt + L"\"";
+        }
         args += L"-d \"" + EscapeWt(dir) + L"\" " + EscapeWt(inner);
         HINSTANCE h = ShellExecuteW(nullptr, L"open", wt.c_str(), args.c_str(), folder.c_str(), SW_SHOWNORMAL);
         if ((INT_PTR)h > 32) return S_OK;

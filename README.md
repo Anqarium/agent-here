@@ -28,6 +28,12 @@ Your shell profile loads, and when `claude` exits you are left in the shell in t
 The default profile is read on every click, so changing it in Windows Terminal takes effect
 at once. Without Windows Terminal, `claude` opens in the default console.
 
+A **new** terminal session starts with a short first message, so Claude greets you with a
+summary of the project (git status, recent commits, `CLAUDE.md`/`README.md`) and asks what
+to work on, without changing any file. The message is in Turkish or English: Claude Code's own
+`language` setting in `%USERPROFILE%\.claude\settings.json` decides, and without it the Windows
+display language. Resumed sessions get no message, and typing `claude` yourself is unchanged.
+
 **Open in Claude Desktop** opens `claude://code/new?folder=<path>`. The desktop app asks for
 confirmation every time a folder comes from another app; that is the app's own safety
 check, and there is no setting to turn it off. The entry is hidden when the desktop app is
