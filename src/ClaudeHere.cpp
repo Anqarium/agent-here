@@ -569,13 +569,13 @@ static std::wstring StartPrompt() {
            L"Do not modify any files yet.";
 }
 
-// Opens claude in `folder`; a non-empty resumeId resumes that session instead of starting a new one
-// (a new session starts with StartPrompt).
-static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& resumeId) {
+// Opens claude in `folder`; a non-empty resumeId resumes that session instead of starting a new one.
+// `greet` makes a new session start with StartPrompt.
+static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& resumeId, bool greet) {
     std::wstring claude = ClaudeCliPath();
     if (claude.empty()) return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     std::wstring claudeArgs = resumeId.empty() ? std::wstring() : L" --resume " + resumeId;
-    std::wstring prompt = resumeId.empty() ? StartPrompt() : std::wstring();
+    std::wstring prompt = resumeId.empty() && greet ? StartPrompt() : std::wstring();
 
     std::wstring wt = EnvPath(L"LOCALAPPDATA", L"\\Microsoft\\WindowsApps\\wt.exe");
     if (!wt.empty() && FileExists(wt)) {
@@ -610,8 +610,11 @@ static HRESULT OpenUrl(const std::wstring& url) {
     return (INT_PTR)h > 32 ? S_OK : HRESULT_FROM_WIN32(GetLastError());
 }
 
-static HRESULT LaunchDesktop(const std::wstring& folder) {
-    return OpenUrl(L"claude://code/new?folder=" + UriEncode(folder));
+// `greet` adds the start prompt: the desktop app reads `q` (or `prompt`) of claude://code/new.
+static HRESULT LaunchDesktop(const std::wstring& folder, bool greet) {
+    std::wstring url = L"claude://code/new?folder=" + UriEncode(folder);
+    if (greet) url += L"&prompt=" + UriEncode(StartPrompt());
+    return OpenUrl(url);
 }
 
 // claude://resume imports a CLI transcript by its UUID and opens it in the desktop app.
@@ -619,13 +622,14 @@ static HRESULT LaunchDesktopResume(const std::wstring& sessionId) {
     return OpenUrl(L"claude://resume?session=" + sessionId);
 }
 
-static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId) {
-    if (kind == Kind::Terminal) return LaunchTerminal(folder, resumeId);
-    return resumeId.empty() ? LaunchDesktop(folder) : LaunchDesktopResume(resumeId);
+static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool greet = false) {
+    if (kind == Kind::Terminal) return LaunchTerminal(folder, resumeId, greet);
+    return resumeId.empty() ? LaunchDesktop(folder, greet) : LaunchDesktopResume(resumeId);
 }
 
-// Root: the top-level entry. Its submenu holds New, a separator and one Resume per session.
-enum class Role { Root, New, Separator, Resume };
+// Root: the top-level entry. Its submenu holds New, NewSummary (a new session that starts with a
+// project summary), a separator and one Resume per session.
+enum class Role { Root, New, NewSummary, Separator, Resume };
 
 // Enumerator of a submenu. It owns one reference to each child.
 class EnumCommands final : public IEnumExplorerCommand {
@@ -724,6 +728,8 @@ public:
             return SHStrDupW(L"", name);
         case Role::New:
             return SHStrDupW(tr ? L"Yeni oturum" : L"New session", name);
+        case Role::NewSummary:
+            return SHStrDupW(tr ? L"Yeni oturum + özet" : L"New session + summary", name);
         case Role::Resume:
             return SHStrDupW(session_.label.c_str(), name);
         case Role::Root:
@@ -785,7 +791,7 @@ public:
         std::wstring folder;
         HRESULT hr = TargetFolder(items, site_, folder);
         if (FAILED(hr)) return hr;
-        return Launch(kind_, folder, L"");
+        return Launch(kind_, folder, L"", role_ == Role::NewSummary);
     }
     // The root has a submenu only when the folder has sessions; otherwise it stays a plain entry.
     // (ECF_HASSPLITBUTTON was tried: the new Windows 11 menu never invokes the root then.)
@@ -800,6 +806,7 @@ public:
         if (role_ != Role::Root || !HasSessions()) return E_NOTIMPL;
         std::vector<IExplorerCommand*> children;
         children.push_back(NewChild(Role::New, Session()));
+        children.push_back(NewChild(Role::NewSummary, Session()));
         children.push_back(NewChild(Role::Separator, Session()));
         for (const Session& s : sessions_) children.push_back(NewChild(Role::Resume, s));
         *e = new (std::nothrow) EnumCommands(std::move(children));
