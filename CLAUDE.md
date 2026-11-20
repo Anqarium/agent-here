@@ -46,17 +46,18 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   and trailing commas are stripped, then `Windows.Data.Json`), passes `defaultProfile` with
   `-p` and runs claude inside the profile's shell. If the profile already carries a command
   (`-Command`, `/c`, …), claude runs directly instead.
-- Start prompt: only the "New session + summary" submenu item (`Role::NewSummary`) sends it; the
-  plain "New session" and the root click of a folder without sessions stay plain, because every
-  greeting costs a model turn. The terminal passes `StartPrompt()` as claude's first argument so the
-  model answers at once (a hook can only add context, never make it speak). The text crosses three
-  quoting layers (wt, the shell, claude), so it must not contain quotes, `;` or shell metacharacters.
-  pwsh gets it in single quotes inside `-Command "..."`; cmd needs the whole `/k` line wrapped in one
-  extra pair of quotes (it strips the first and last quote when there are more than two). Language:
-  `language` from `~/.claude/settings.json` (user settings only), else the Windows UI language.
-  The desktop link adds `&prompt=<encoded>`: the app's `code/new` handler reads `q` or `prompt`
-  (read from app.asar). The desktop app only fills the prompt into the input box and never sends it
-  (tried by hand); the terminal sends it.
+- Start prompt: the repo deliberately ships no prompt text and no language logic (the maintainer's
+  own flow is a personal `/brifing` skill, not for everyone). `StartPrompt()` reads the user's
+  `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`; only when it has text does the submenu list "New
+  session + prompt" (`Role::NewPrompt`). The plain "New session" and the root click stay plain,
+  because every start prompt costs a model turn. The terminal passes it as claude's first argument so
+  the model answers at once (a hook can only add context, never make it speak). The text crosses three
+  quoting layers (wt, the shell, claude), so `StartPrompt()` turns quotes, `;`, `%` and control
+  characters into spaces. pwsh gets it in single quotes inside `-Command "..."`; cmd needs the whole
+  `/k` line wrapped in one extra pair of quotes (it strips the first and last quote when there are
+  more than two). The desktop link adds `&prompt=<encoded>`: the app's `code/new` handler reads `q` or
+  `prompt` (read from app.asar), but only fills it into the input box and never sends it (tried by
+  hand); the terminal sends it. A slash command as the prompt is untested.
 - Desktop app detection: the MSIX package `Claude_pzs8sxrjxfjjc` first, then the per-user
   Squirrel setup's launcher `%LOCALAPPDATA%\AnthropicClaude\claude.exe` (a reinstall can switch
   from one to the other; without a match `GetState` hides the entry). Change both in

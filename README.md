@@ -36,22 +36,24 @@ not installed, and the terminal entry is hidden when `claude` is not found.
 ### Recent sessions
 
 When the clicked folder has Claude Code sessions, both entries open a submenu: **New session**,
-**New session + summary**, a separator, then the five most recent sessions of that folder
-(newest first, labelled with the session's title and time). Both entries list the same sessions.
+a separator, then the five most recent sessions of that folder (newest first, labelled with the
+session's title and time). Both entries list the same sessions.
 
-- New session: a plain new session.
-- New session + summary: a new session that starts with a short first message, so Claude
-  summarizes the project (git status, recent commits, `CLAUDE.md`/`README.md`) and asks what to
-  work on, without changing any file. The message is in Turkish or English: Claude Code's own
-  `language` setting in `%USERPROFILE%\.claude\settings.json` decides, and without it the Windows
-  display language. The terminal sends it at once; the desktop app only fills it into the input
-  box, so you press Enter. Typing `claude` yourself is unchanged.
 - Terminal: resuming runs `claude --resume <id>` in the folder.
 - Desktop: resuming opens `claude://resume?session=<id>`.
 
 The sessions are read from `%USERPROFILE%\.claude\projects\`. Sessions that Claude started on
 its own (scheduled tasks, sessions spawned by another session) are left out. Without sessions in the folder,
-the entries behave as before: one click starts a plain new session, with no summary option.
+the entries behave as before: one click starts a new session.
+
+### Optional start prompt
+
+The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`
+with some text (for example a slash command or a short instruction), the submenu gets one more
+item, **New session + prompt**, that starts a new session with that text as the first message.
+Without the file the item is not shown. The terminal sends the text at once; the desktop app only
+fills it into the input box, so you press Enter there. Quotes, `;`, `%` and line breaks in the
+file are replaced by spaces. `uninstall.ps1` deletes that folder, the file included.
 
 ## How it works
 

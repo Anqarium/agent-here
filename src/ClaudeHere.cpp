@@ -535,47 +535,27 @@ static std::wstring EscapeWt(const std::wstring& s) {
     return o;
 }
 
-// Turkish or English text for the start prompt: Claude Code's own `language` setting in
-// ~/.claude/settings.json, else the Windows display language.
-static bool PromptInTurkish() {
-    bool tr = PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_TURKISH;
-    std::wstring path = EnvPath(L"USERPROFILE", L"\\.claude\\settings.json");
-    std::wstring text;
-    if (path.empty() || !ReadUtf8File(path, text)) return tr;
-    try {
-        using namespace winrt::Windows::Data::Json;
-        JsonObject root = JsonObject::Parse(StripJsonc(text));
-        std::wstring lang = Lower(std::wstring(root.GetNamedString(L"language", L"")));
-        if (!lang.empty())
-            return lang == L"tr" || lang.find(L"turk") != std::wstring::npos || lang.find(L"türk") != std::wstring::npos;
-    } catch (...) {
-        // Broken settings file or a non-string value: fall back to the Windows language.
-    }
-    return tr;
-}
-
-// First message of a new terminal session, so Claude greets with a short project summary instead of
-// waiting for input. It goes through three layers of quoting (wt, the shell, claude): no quotes,
-// semicolons or shell metacharacters.
+// The user's own start prompt, read from %LOCALAPPDATA%\ClaudeHere\start-prompt.txt. Empty when the
+// file is missing or blank: the repo ships no prompt of its own. The text goes through three layers
+// of quoting (wt, the shell, claude), so quotes, `;`, `%` and line breaks become spaces.
 static std::wstring StartPrompt() {
-    if (PromptInTurkish())
-        return L"Bu klasörde yeni bir oturum başlıyor. Önce varsa git durumuna ve son commit geçmişine "
-               L"kısaca bak, varsa CLAUDE.md veya README.md dosyasını oku. Sonra projenin nerede olduğunu ve "
-               L"neyin açık kaldığını kısa bir özetle anlat ve ne üzerinde çalışmak istediğimi sor. "
-               L"Şimdilik hiçbir dosyayı değiştirme.";
-    return L"A new session is starting in this folder. First take a brief look at the git status and recent "
-           L"commits if there are any, and read CLAUDE.md or README.md if present. Then give me a short summary "
-           L"of where the project stands and what looks open, and ask what I want to work on. "
-           L"Do not modify any files yet.";
+    std::wstring path = EnvPath(L"LOCALAPPDATA", L"\\ClaudeHere\\start-prompt.txt");
+    std::wstring text;
+    if (path.empty() || !ReadUtf8File(path, text)) return L"";
+    for (auto& c : text)
+        if (c == L'"' || c == L'\'' || c == L';' || c == L'%' || c < L' ') c = L' ';
+    size_t first = text.find_first_not_of(L' ');
+    if (first == std::wstring::npos) return L"";
+    return text.substr(first, text.find_last_not_of(L' ') - first + 1);
 }
 
 // Opens claude in `folder`; a non-empty resumeId resumes that session instead of starting a new one.
-// `greet` makes a new session start with StartPrompt.
-static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& resumeId, bool greet) {
+// `withPrompt` makes a new session start with the user's StartPrompt.
+static HRESULT LaunchTerminal(const std::wstring& folder, const std::wstring& resumeId, bool withPrompt) {
     std::wstring claude = ClaudeCliPath();
     if (claude.empty()) return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     std::wstring claudeArgs = resumeId.empty() ? std::wstring() : L" --resume " + resumeId;
-    std::wstring prompt = resumeId.empty() && greet ? StartPrompt() : std::wstring();
+    std::wstring prompt = resumeId.empty() && withPrompt ? StartPrompt() : std::wstring();
 
     std::wstring wt = EnvPath(L"LOCALAPPDATA", L"\\Microsoft\\WindowsApps\\wt.exe");
     if (!wt.empty() && FileExists(wt)) {
@@ -610,10 +590,11 @@ static HRESULT OpenUrl(const std::wstring& url) {
     return (INT_PTR)h > 32 ? S_OK : HRESULT_FROM_WIN32(GetLastError());
 }
 
-// `greet` adds the start prompt: the desktop app reads `q` (or `prompt`) of claude://code/new.
-static HRESULT LaunchDesktop(const std::wstring& folder, bool greet) {
+// `withPrompt` adds the user's start prompt: the desktop app reads `q` (or `prompt`) of claude://code/new.
+static HRESULT LaunchDesktop(const std::wstring& folder, bool withPrompt) {
     std::wstring url = L"claude://code/new?folder=" + UriEncode(folder);
-    if (greet) url += L"&prompt=" + UriEncode(StartPrompt());
+    std::wstring prompt = withPrompt ? StartPrompt() : std::wstring();
+    if (!prompt.empty()) url += L"&prompt=" + UriEncode(prompt);
     return OpenUrl(url);
 }
 
@@ -622,14 +603,14 @@ static HRESULT LaunchDesktopResume(const std::wstring& sessionId) {
     return OpenUrl(L"claude://resume?session=" + sessionId);
 }
 
-static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool greet = false) {
-    if (kind == Kind::Terminal) return LaunchTerminal(folder, resumeId, greet);
-    return resumeId.empty() ? LaunchDesktop(folder, greet) : LaunchDesktopResume(resumeId);
+static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool withPrompt = false) {
+    if (kind == Kind::Terminal) return LaunchTerminal(folder, resumeId, withPrompt);
+    return resumeId.empty() ? LaunchDesktop(folder, withPrompt) : LaunchDesktopResume(resumeId);
 }
 
-// Root: the top-level entry. Its submenu holds New, NewSummary (a new session that starts with a
-// project summary), a separator and one Resume per session.
-enum class Role { Root, New, NewSummary, Separator, Resume };
+// Root: the top-level entry. Its submenu holds New, NewPrompt (a new session that starts with the
+// user's start-prompt.txt; only listed when that file has text), a separator and one Resume per session.
+enum class Role { Root, New, NewPrompt, Separator, Resume };
 
 // Enumerator of a submenu. It owns one reference to each child.
 class EnumCommands final : public IEnumExplorerCommand {
@@ -728,8 +709,8 @@ public:
             return SHStrDupW(L"", name);
         case Role::New:
             return SHStrDupW(tr ? L"Yeni oturum" : L"New session", name);
-        case Role::NewSummary:
-            return SHStrDupW(tr ? L"Yeni oturum + özet" : L"New session + summary", name);
+        case Role::NewPrompt:
+            return SHStrDupW(tr ? L"Yeni oturum + prompt" : L"New session + prompt", name);
         case Role::Resume:
             return SHStrDupW(session_.label.c_str(), name);
         case Role::Root:
@@ -791,7 +772,7 @@ public:
         std::wstring folder;
         HRESULT hr = TargetFolder(items, site_, folder);
         if (FAILED(hr)) return hr;
-        return Launch(kind_, folder, L"", role_ == Role::NewSummary);
+        return Launch(kind_, folder, L"", role_ == Role::NewPrompt);
     }
     // The root has a submenu only when the folder has sessions; otherwise it stays a plain entry.
     // (ECF_HASSPLITBUTTON was tried: the new Windows 11 menu never invokes the root then.)
@@ -806,7 +787,7 @@ public:
         if (role_ != Role::Root || !HasSessions()) return E_NOTIMPL;
         std::vector<IExplorerCommand*> children;
         children.push_back(NewChild(Role::New, Session()));
-        children.push_back(NewChild(Role::NewSummary, Session()));
+        if (!StartPrompt().empty()) children.push_back(NewChild(Role::NewPrompt, Session()));
         children.push_back(NewChild(Role::Separator, Session()));
         for (const Session& s : sessions_) children.push_back(NewChild(Role::Resume, s));
         *e = new (std::nothrow) EnumCommands(std::move(children));
