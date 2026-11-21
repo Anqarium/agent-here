@@ -1,4 +1,4 @@
-# claude-here
+# agent-here
 
 Adds four entries to the **new Windows 11 context menu** (the short one, not only
 "Show more options"):
@@ -16,7 +16,7 @@ entries when `agy` or the Antigravity app (`%LOCALAPPDATA%\Programs\antigravity`
 They show up when you right-click a folder and when you right-click empty space inside one.
 The titles follow the Windows display language: Turkish on a Turkish UI, English otherwise.
 
-> Unofficial. Not affiliated with or endorsed by Anthropic.
+> Unofficial. Not affiliated with or endorsed by Anthropic or Google.
 
 ## How it behaves
 
@@ -53,7 +53,7 @@ the entries behave as before: one click starts a new session.
 
 ### Optional start prompt
 
-The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`
+The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\AgentHere\start-prompt.txt`
 with some text (for example a slash command or a short instruction), the submenu's **New session**
 starts with that text as the first message. It applies only where the submenu exists, that is in
 folders that already have sessions; in a folder without sessions the click stays a plain new
@@ -65,7 +65,7 @@ the file included.
 
 ## How it works
 
-A small C++ COM DLL (`src/ClaudeHere.cpp`) implements `IExplorerCommand`. Each command is
+A small C++ COM DLL (`src/AgentHere.cpp`) implements `IExplorerCommand`. Each command is
 registered by its own **sparse package** (`package/AppxManifest.template.xml`). This is the
 same mechanism Windows Terminal uses for "Open in Terminal". The DLL runs in a `dllhost.exe`
 surrogate, not inside Explorer.
@@ -97,8 +97,8 @@ because `agy.exe` has none of its own.
 Run from PowerShell 7 in the repo folder:
 
 ```powershell
-.\build.ps1      # builds build\ClaudeHere.dll and build\ClaudeHereStub.exe
-.\install.ps1    # copies them to %LOCALAPPDATA%\ClaudeHere and registers the packages
+.\build.ps1      # builds build\AgentHere.dll and build\AgentHereStub.exe
+.\install.ps1    # copies them to %LOCALAPPDATA%\AgentHere and registers the packages
 ```
 
 Run both again to update. To remove everything:

@@ -1,8 +1,8 @@
-# Removes the context menu packages and deletes %LOCALAPPDATA%\ClaudeHere.
+# Removes the context menu packages and deletes %LOCALAPPDATA%\AgentHere.
 $ErrorActionPreference = 'Stop'
-$base = Join-Path $env:LOCALAPPDATA 'ClaudeHere'
+$base = Join-Path $env:LOCALAPPDATA 'AgentHere'
 
-foreach ($name in 'ClaudeHere.Terminal', 'ClaudeHere.Desktop', 'ClaudeHere.AntigravityCli', 'ClaudeHere.Antigravity') {
+foreach ($name in 'AgentHere.Terminal', 'AgentHere.Desktop', 'AgentHere.AntigravityCli', 'AgentHere.Antigravity') {
   $pkg = Get-AppxPackage -Name $name
   if ($pkg) { Remove-AppxPackage -Package $pkg.PackageFullName; Write-Host "Removed: $name" }
 }

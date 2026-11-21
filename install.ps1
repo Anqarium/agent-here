@@ -1,13 +1,13 @@
-# Copies the built DLL to %LOCALAPPDATA%\ClaudeHere and registers each menu command as
+# Copies the built DLL to %LOCALAPPDATA%\AgentHere and registers each menu command as
 # its own sparse package. Developer Mode must be on (the packages are unsigned).
 # Running it again updates: the old packages are removed and registered again.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $build = Join-Path $root 'build'
-$base = Join-Path $env:LOCALAPPDATA 'ClaudeHere'
+$base = Join-Path $env:LOCALAPPDATA 'AgentHere'
 $version = '1.0.0.0'
 
-if (-not (Test-Path (Join-Path $build 'ClaudeHere.dll'))) { & (Join-Path $root 'build.ps1') }
+if (-not (Test-Path (Join-Path $build 'AgentHere.dll'))) { & (Join-Path $root 'build.ps1') }
 
 Add-Type -AssemblyName System.Drawing
 
@@ -120,17 +120,17 @@ function Write-Logos([string]$exe, [string]$assets) {
 # the DLL picks the menu titles itself every time the menu opens.
 $tr = (Get-UICulture).TwoLetterISOLanguageName -eq 'tr'
 $commands = @(
-  @{ Name = 'ClaudeHere.Terminal'; Folder = 'Terminal'; Verb = 'ClaudeCode'
+  @{ Name = 'AgentHere.Terminal'; Folder = 'Terminal'; Verb = 'ClaudeCode'
      Display = $(if ($tr) { 'Claude Code (sağ tık)' } else { 'Claude Code (context menu)' })
      Clsid = '0f55b8ab-4947-4eab-b1f7-4e8c0db27ac9'; Exe = Find-ClaudeCli },
-  @{ Name = 'ClaudeHere.Desktop'; Folder = 'Desktop'; Verb = 'ClaudeDesktop'
+  @{ Name = 'AgentHere.Desktop'; Folder = 'Desktop'; Verb = 'ClaudeDesktop'
      Display = $(if ($tr) { 'Claude Masaüstü (sağ tık)' } else { 'Claude Desktop (context menu)' })
      Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
-  @{ Name = 'ClaudeHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
+  @{ Name = 'AgentHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
      # agy.exe has no icon of its own (Windows would show a plain blue square), so it borrows the app's.
      Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-Antigravity },
-  @{ Name = 'ClaudeHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
+  @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
      Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
 )
@@ -154,7 +154,7 @@ foreach ($c in $commands) {
   $dir = Join-Path $base $c.Folder
   $pkg = Join-Path $dir 'package'
   New-Item -ItemType Directory -Force $pkg | Out-Null
-  Copy-Item (Join-Path $build 'ClaudeHere.dll'), (Join-Path $build 'ClaudeHereStub.exe') $dir -Force
+  Copy-Item (Join-Path $build 'AgentHere.dll'), (Join-Path $build 'AgentHereStub.exe') $dir -Force
   $iconExe = if ($c.IconExe) { $c.IconExe } else { $c.Exe }
   Write-Logos $iconExe (Join-Path $pkg 'Assets')
   Write-MenuIcon $iconExe (Join-Path $dir 'icon.ico')

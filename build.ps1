@@ -1,4 +1,4 @@
-# Builds ClaudeHere.dll and ClaudeHereStub.exe into build/ with MSVC.
+# Builds AgentHere.dll and AgentHereStub.exe into build/ with MSVC.
 # Requires Visual Studio 2022 (C++ tools) and the Windows 11 SDK.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -14,8 +14,8 @@ $flags = '/nologo /utf-8 /std:c++17 /O2 /MT /EHsc /W4 /DUNICODE /D_UNICODE'
 $cmd = @(
   "`"$vcvars`" >nul",
   "cd /d `"$out`"",
-  "cl $flags /LD `"$root\src\ClaudeHere.cpp`" /Fe:ClaudeHere.dll /link /DEF:`"$root\src\ClaudeHere.def`"",
-  "cl $flags `"$root\src\Stub.cpp`" /Fe:ClaudeHereStub.exe /link /SUBSYSTEM:WINDOWS user32.lib"
+  "cl $flags /LD `"$root\src\AgentHere.cpp`" /Fe:AgentHere.dll /link /DEF:`"$root\src\AgentHere.def`"",
+  "cl $flags `"$root\src\Stub.cpp`" /Fe:AgentHereStub.exe /link /SUBSYSTEM:WINDOWS user32.lib"
 ) -join ' && '
 cmd /c $cmd
 if ($LASTEXITCODE -ne 0) { throw "Build failed (exit code $LASTEXITCODE)." }

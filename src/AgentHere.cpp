@@ -703,11 +703,11 @@ static std::wstring EscapeWt(const std::wstring& s) {
     return o;
 }
 
-// The user's own start prompt, read from %LOCALAPPDATA%\ClaudeHere\start-prompt.txt. Empty when the
+// The user's own start prompt, read from %LOCALAPPDATA%\AgentHere\start-prompt.txt. Empty when the
 // file is missing or blank: the repo ships no prompt of its own. The text goes through three layers
 // of quoting (wt, the shell, claude), so quotes, `;`, `%` and line breaks become spaces.
 static std::wstring StartPrompt() {
-    std::wstring path = EnvPath(L"LOCALAPPDATA", L"\\ClaudeHere\\start-prompt.txt");
+    std::wstring path = EnvPath(L"LOCALAPPDATA", L"\\AgentHere\\start-prompt.txt");
     std::wstring text;
     if (path.empty() || !ReadUtf8File(path, text)) return L"";
     for (auto& c : text)

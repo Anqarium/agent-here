@@ -1,4 +1,4 @@
-LIBRARY ClaudeHere
+LIBRARY AgentHere
 EXPORTS
     DllGetClassObject PRIVATE
     DllCanUnloadNow PRIVATE

@@ -1,13 +1,15 @@
 # CLAUDE.md
 
-Windows 11 context menu shell extension (`IExplorerCommand`) adding "Open in Claude Code"
-and "Open in Claude Desktop". Behaviour and install steps are in `README.md`.
+Windows 11 context menu shell extension (`IExplorerCommand`) adding "Open in Claude Code",
+"Open in Claude Desktop", "Open in Antigravity CLI" and "Open in Antigravity". It was called
+`claude-here` until the Antigravity entries made the name too narrow. Behaviour and install steps
+are in `README.md`.
 
 ## Language
 
 The repository is public: code, comments, docs and commit messages (Conventional Commits)
 are in English. This overrides the user's global preference for Turkish docs and commits.
-Exception: the Turkish menu titles in `src/ClaudeHere.cpp` and package names in
+Exception: the Turkish menu titles in `src/AgentHere.cpp` and package names in
 `install.ps1`. The first commits are in Turkish; history is not rewritten. Replies to the
 user in chat stay in Turkish.
 
@@ -15,25 +17,28 @@ user in chat stay in Turkish.
 
 ```powershell
 .\build.ps1      # MSVC via vcvars64, outputs to build\
-.\install.ps1    # copies to %LOCALAPPDATA%\ClaudeHere, registers both sparse packages
+.\install.ps1    # copies to %LOCALAPPDATA%\AgentHere, registers the four sparse packages
 .\uninstall.ps1  # removes the packages and the install folder
 ```
 
+The maintainer has authorised Claude, in every session of this repo, to run `.\install.ps1` itself
+whenever a change needs installing (after `.\build.ps1`); do not ask them to run it.
+
 There are no automated tests. The COM side was checked with a throwaway probe that calls
-`CoCreateInstance` + `GetTitle`/`GetIcon`/`GetState`/`Invoke` on both CLSIDs; the menu itself
-can only be checked by hand. Without installing, a probe can `LoadLibrary` `build\ClaudeHere.dll`,
+`CoCreateInstance` + `GetTitle`/`GetIcon`/`GetState`/`Invoke` on every CLSID; the menu itself
+can only be checked by hand. Without installing, a probe can `LoadLibrary` `build\AgentHere.dll`,
 call its `DllGetClassObject`, then `GetState` on a folder and `EnumSubCommands` to list the
-session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Desktop}\ClaudeHere.dll`.
+session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Desktop,AntigravityCli,Antigravity}\AgentHere.dll`.
 
 ## Notes
 
 - Packages are unsigned and registered with `Add-AppxPackage -Register -ExternalLocation`,
   which needs Developer Mode. Without it, signing would need makeappx + a certificate
   trusted in TrustedPeople (admin).
-- Register from `%LOCALAPPDATA%\ClaudeHere`, never from the repo: the loaded DLL gets locked.
+- Register from `%LOCALAPPDATA%\AgentHere`, never from the repo: the loaded DLL gets locked.
   `install.ps1` first stops the `dllhost` processes holding it.
-- The commands are deliberately separate packages (`ClaudeHere.Terminal`, `ClaudeHere.Desktop`,
-  `ClaudeHere.AntigravityCli`, `ClaudeHere.Antigravity`): Windows may group several verbs of one
+- The commands are deliberately separate packages (`AgentHere.Terminal`, `AgentHere.Desktop`,
+  `AgentHere.AntigravityCli`, `AgentHere.Antigravity`): Windows may group several verbs of one
   package into a submenu.
 - Antigravity entries: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
   Claude terminal entry, without resume or start prompt; the app entry runs
@@ -48,7 +53,7 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   the CLI entry's icon from `Antigravity.exe` (`IconExe`). The app path is the install that
   registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
   own Explorer command DLL) is a second install that is not used.
-- The CLSIDs live in both `src/ClaudeHere.cpp` and `install.ps1`; change them together.
+- The CLSIDs live in both `src/AgentHere.cpp` and `install.ps1`; change them together.
 - Menu icons: `GetIcon` returns `icon.ico` next to the DLL, falling back to the exe's icon 0.
   `install.ps1` generates it from each exe, cropped to the visible area, because the CLI's
   own icon has about 2 px of padding at 32 px and the desktop app's has none (they looked
@@ -62,7 +67,7 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   (`-Command`, `/c`, …), claude runs directly instead.
 - Start prompt: the repo deliberately ships no prompt text and no language logic (the maintainer's
   own flow is a personal `/brifing` skill, not for everyone). `StartPrompt()` reads the user's
-  `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`; when it has text, the submenu's "New session"
+  `%LOCALAPPDATA%\AgentHere\start-prompt.txt`; when it has text, the submenu's "New session"
   (`Role::New`, which exists only for folders with earlier sessions) sends it. The root click of a
   folder without sessions stays plain (nothing to summarize yet, and a prompt costs a model turn);
   a separate "New session + prompt" item was tried and dropped. The terminal passes it as claude's first argument so
@@ -78,7 +83,7 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
 - Desktop app detection: the MSIX package `Claude_pzs8sxrjxfjjc` first, then the per-user
   Squirrel setup's launcher `%LOCALAPPDATA%\AnthropicClaude\claude.exe` (a reinstall can switch
   from one to the other; without a match `GetState` hides the entry). Change both in
-  `src/ClaudeHere.cpp` and `install.ps1`, and re-run `install.ps1` so the icon is regenerated.
+  `src/AgentHere.cpp` and `install.ps1`, and re-run `install.ps1` so the icon is regenerated.
 - Desktop entry: `claude://code/new?folder=<encodeURIComponent>` is the format the desktop
   app's own `ccd` alias produces (read from its app.asar). The app adds `src=external` and
   always asks for confirmation; this cannot be bypassed. Its "Trust this workspace?" answer
