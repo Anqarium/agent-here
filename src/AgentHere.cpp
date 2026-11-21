@@ -755,7 +755,7 @@ static HRESULT LaunchDesktopResume(const std::wstring& sessionId) {
     return OpenUrl(L"claude://resume?session=" + sessionId);
 }
 
-// `withPrompt` (Claude terminal only) starts a new session with the user's start prompt.
+// `withPrompt` (the two terminal entries) starts a new session with the user's start prompt.
 // A non-empty resumeId resumes that Claude session instead.
 static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool withPrompt = false) {
     switch (kind) {
@@ -767,8 +767,12 @@ static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring&
     case Kind::Desktop:
         return resumeId.empty() ? LaunchDesktop(folder) : LaunchDesktopResume(resumeId);
     case Kind::AgyTerminal: {
-        std::wstring args = resumeId.empty() ? std::wstring() : L" --conversation " + resumeId;
-        return LaunchTerminal(AgyCliPath(), folder, args, L"");
+        // agy takes the first message with -i (--prompt-interactive), which sends it and stays open.
+        std::wstring prompt = resumeId.empty() && withPrompt ? StartPrompt() : std::wstring();
+        std::wstring args = !resumeId.empty() ? L" --conversation " + resumeId
+                          : !prompt.empty()   ? std::wstring(L" -i")
+                                              : std::wstring();
+        return LaunchTerminal(AgyCliPath(), folder, args, prompt);
     }
     }
     return E_FAIL;

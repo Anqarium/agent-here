@@ -57,9 +57,11 @@ The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\AgentHere\sta
 with some text (for example a slash command or a short instruction), the submenu's **New session**
 starts with that text as the first message. It applies only where the submenu exists, that is in
 folders that already have sessions; in a folder without sessions the click stays a plain new
-session. Without the file nothing changes. The text is sent at once, as `claude "<text>"`. This is
-for the terminal entry only: the desktop app never sends the text of a link (it only fills a
-draft) and does not recognize a slash command there, so the desktop entry is unchanged. Quotes,
+session. Without the file nothing changes. The text is sent at once, as `claude "<text>"` or
+`agy -i "<text>"`. The same file serves both terminal entries, so a slash command in it needs a
+matching skill in both tools (for agy, `~/.gemini/config/skills/<name>/SKILL.md`). The Claude
+desktop entry does not use it: the desktop app never sends the text of a link (it only fills a
+draft) and does not recognize a slash command there. Quotes,
 `;`, `%` and line breaks in the file are replaced by spaces. `uninstall.ps1` deletes that folder,
 the file included.
 
@@ -78,7 +80,7 @@ each can be moved in or out of the main menu on its own under **Settings → Per
 conversations opened in that folder, newest first) once the folder has agy conversations;
 resuming runs `agy --conversation <id>`. They are read from
 `%USERPROFILE%\.gemini\antigravity-cli\conversation_summaries.db` with the system's
-`winsqlite3.dll`. It does not use the start prompt. `agy.exe` has no icon of its own, so the entry
+`winsqlite3.dll`. Its **New session** uses the start prompt like the Claude one. `agy.exe` has no icon of its own, so the entry
 shows the Antigravity IDE's dark icon when that is installed, and the Antigravity app's icon otherwise.
 
 ## Requirements

@@ -40,7 +40,10 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
 - The commands are deliberately separate packages (`AgentHere.Terminal`, `AgentHere.Desktop`,
   `AgentHere.AntigravityCli`): Windows may group several verbs of one package into a submenu.
 - Antigravity CLI entry: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
-  Claude terminal entry, without the start prompt. It has the session submenu (`ScanAgySessions`): rows of `~\.gemini\antigravity-cli\conversation_summaries.db`
+  Claude terminal entry; its submenu's New sends the start prompt with `agy -i` (`--prompt-interactive`:
+  sends it and stays open). agy finds global skills only in `~/.gemini/config/skills/<name>/SKILL.md`
+  and does not follow a junction there (the maintainer's `brifing` is a real folder whose `SKILL.md`
+  is a hard link to `~/.agents/skills/brifing/SKILL.md`; `agy -p "/brifing"` loaded it). It has the session submenu (`ScanAgySessions`): rows of `~\.gemini\antigravity-cli\conversation_summaries.db`
   read with the system's `winsqlite3.dll`, matched by decoding `workspace_uris` (file:/// URIs) and
   comparing with the folder; sub-agent rows (`parent_conversation_id`) and never-used ones
   (`last_modified_time` 0001-01-01) are hidden; many older rows have an empty `title`, then only the
@@ -93,7 +96,7 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
   characters into spaces. pwsh gets it in single quotes inside `-Command "..."`; cmd needs the whole
   `/k` line wrapped in one extra pair of quotes (it strips the first and last quote when there are
   more than two). A slash command works as the prompt in the terminal (`/brifing` loaded the skill).
-  Terminal only: the desktop `code/new` handler reads `q` or `prompt` (read from app.asar), but it
+  Terminal entries only (Claude and agy): the desktop `code/new` handler reads `q` or `prompt` (read from app.asar), but it
   only fills a draft and the app offers no auto-send parameter (the allowed extras are `folder`,
   `file`, `environment`, `runner_pool`); a slash command shows as plain text. The workspace-trust
   dialog is not the cause (`trusted=true` in the log). So the desktop entry sends no prompt.
