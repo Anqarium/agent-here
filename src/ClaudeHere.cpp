@@ -608,9 +608,9 @@ static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring&
     return resumeId.empty() ? LaunchDesktop(folder, withPrompt) : LaunchDesktopResume(resumeId);
 }
 
-// Root: the top-level entry. Its submenu holds New, NewPrompt (a new session that starts with the
-// user's start-prompt.txt; only listed when that file has text), a separator and one Resume per session.
-enum class Role { Root, New, NewPrompt, Separator, Resume };
+// Root: the top-level entry. Its submenu (only for folders that already have sessions) holds New,
+// a separator and one Resume per session. New starts with the user's start-prompt.txt, if there is one.
+enum class Role { Root, New, Separator, Resume };
 
 // Enumerator of a submenu. It owns one reference to each child.
 class EnumCommands final : public IEnumExplorerCommand {
@@ -709,8 +709,6 @@ public:
             return SHStrDupW(L"", name);
         case Role::New:
             return SHStrDupW(tr ? L"Yeni oturum" : L"New session", name);
-        case Role::NewPrompt:
-            return SHStrDupW(tr ? L"Yeni oturum + prompt" : L"New session + prompt", name);
         case Role::Resume:
             return SHStrDupW(session_.label.c_str(), name);
         case Role::Root:
@@ -772,7 +770,9 @@ public:
         std::wstring folder;
         HRESULT hr = TargetFolder(items, site_, folder);
         if (FAILED(hr)) return hr;
-        return Launch(kind_, folder, L"", role_ == Role::NewPrompt);
+        // Only the submenu's New (a folder with earlier sessions) carries the start prompt; the root
+        // of a folder without sessions stays a plain new session.
+        return Launch(kind_, folder, L"", role_ == Role::New);
     }
     // The root has a submenu only when the folder has sessions; otherwise it stays a plain entry.
     // (ECF_HASSPLITBUTTON was tried: the new Windows 11 menu never invokes the root then.)
@@ -787,7 +787,6 @@ public:
         if (role_ != Role::Root || !HasSessions()) return E_NOTIMPL;
         std::vector<IExplorerCommand*> children;
         children.push_back(NewChild(Role::New, Session()));
-        if (!StartPrompt().empty()) children.push_back(NewChild(Role::NewPrompt, Session()));
         children.push_back(NewChild(Role::Separator, Session()));
         for (const Session& s : sessions_) children.push_back(NewChild(Role::Resume, s));
         *e = new (std::nothrow) EnumCommands(std::move(children));

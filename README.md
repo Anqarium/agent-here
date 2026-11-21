@@ -49,10 +49,11 @@ the entries behave as before: one click starts a new session.
 ### Optional start prompt
 
 The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`
-with some text (for example a slash command or a short instruction), the submenu gets one more
-item, **New session + prompt**, that starts a new session with that text as the first message.
-Without the file the item is not shown. The terminal sends the text at once; the desktop app only
-fills it into the input box, so you press Enter there. Quotes, `;`, `%` and line breaks in the
+with some text (for example a slash command or a short instruction), the submenu's **New session**
+starts with that text as the first message. It applies only where the submenu exists, that is in
+folders that already have sessions; in a folder without sessions the click stays a plain new
+session. Without the file nothing changes. The terminal sends the text at once; the desktop app
+only fills it into the input box, so you press Enter there. Quotes, `;`, `%` and line breaks in the
 file are replaced by spaces. `uninstall.ps1` deletes that folder, the file included.
 
 ## How it works

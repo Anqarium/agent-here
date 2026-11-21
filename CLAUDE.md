@@ -48,9 +48,10 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   (`-Command`, `/c`, …), claude runs directly instead.
 - Start prompt: the repo deliberately ships no prompt text and no language logic (the maintainer's
   own flow is a personal `/brifing` skill, not for everyone). `StartPrompt()` reads the user's
-  `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`; only when it has text does the submenu list "New
-  session + prompt" (`Role::NewPrompt`). The plain "New session" and the root click stay plain,
-  because every start prompt costs a model turn. The terminal passes it as claude's first argument so
+  `%LOCALAPPDATA%\ClaudeHere\start-prompt.txt`; when it has text, the submenu's "New session"
+  (`Role::New`, which exists only for folders with earlier sessions) sends it. The root click of a
+  folder without sessions stays plain (nothing to summarize yet, and a prompt costs a model turn);
+  a separate "New session + prompt" item was tried and dropped. The terminal passes it as claude's first argument so
   the model answers at once (a hook can only add context, never make it speak). The text crosses three
   quoting layers (wt, the shell, claude), so `StartPrompt()` turns quotes, `;`, `%` and control
   characters into spaces. pwsh gets it in single quotes inside `-Command "..."`; cmd needs the whole
