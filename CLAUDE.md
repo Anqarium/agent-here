@@ -50,14 +50,18 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
   time shows; resume is `agy --conversation <id>`. The `datetime` column has numeric affinity, so a
   bare `> '2000'` compares wrongly: use `substr(...) >= '2000'`. The app entry has no submenu (no
   known way to resume a conversation there). `agy.exe` has no icon resource, so `install.ps1` takes
-  the CLI entry's icon from `Antigravity.exe` (`IconExe`). The app path is the install that
+  the CLI entry's icon from `Programs\Antigravity IDE\Antigravity IDE.exe` (the same "A" on a dark
+  grid tile, set apart from the app entry like Claude Code from Claude Desktop), falling back to
+  `Antigravity.exe` (`IconExe` / `Find-AgyIcon`). No CLI-specific icon exists online either. The app path is the install that
   registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
   own Explorer command DLL) is a second install that is not used.
 - The CLSIDs live in both `src/AgentHere.cpp` and `install.ps1`; change them together.
 - Menu icons: `GetIcon` returns `icon.ico` next to the DLL, falling back to the exe's icon 0.
   `install.ps1` generates it from each exe, cropped to the visible area, because the CLI's
   own icon has about 2 px of padding at 32 px and the desktop app's has none (they looked
-  different in size). No icon art is committed to the repo.
+  different in size). The package logos go through the same crop (`Get-VisibleRect`,
+  `New-IconSquare`); uncropped, Claude Code looked smaller than Claude Desktop in Settings.
+  No icon art is committed to the repo.
 - Package logos (Settings → Context menu → App extensions): Windows resolves `Logo` against the
   external location (`%LOCALAPPDATA%\AgentHere\<cmd>\Assets\`), not the manifest's `package\`
   folder, so `install.ps1` writes them to both; with only `package\Assets` Settings showed a

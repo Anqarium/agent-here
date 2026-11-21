@@ -43,18 +43,24 @@ function Find-Antigravity {
   return $null
 }
 
+# Icon for the CLI entry: the Antigravity IDE's dark tile sets it apart from the app entry, as the
+# Claude CLI's dark tile does from Claude Desktop. agy.exe has no icon of its own.
+function Find-AgyIcon {
+  $ide = Join-Path $env:LOCALAPPDATA 'Programs\Antigravity IDE\Antigravity IDE.exe'
+  if (Test-Path $ide) { return $ide }
+  return Find-Antigravity
+}
+
 function Get-ExeIcon([string]$exe) {
   $icon = try { [System.Drawing.Icon]::ExtractIcon($exe, 0, 256) } catch { $null }
   if (-not $icon) { $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe) }
   return $icon
 }
 
-# The menu icon. The two exes' own icons have different built-in padding (the CLI's is
-# smaller), so each is cropped to its visible area and centred on a square: both then fill
-# the same share of the menu slot. Written as a multi-size ICO of PNG frames.
-function Write-MenuIcon([string]$exe, [string]$path) {
-  $icon = Get-ExeIcon $exe
-  $src = $icon.ToBitmap()
+# The exes' own icons have different built-in padding (the Claude CLI's is smaller), so menu
+# icons and package logos are cropped to the visible area and centred on a square: they then
+# fill the same share of their slot.
+function Get-VisibleRect([System.Drawing.Bitmap]$src) {
   $minX = $src.Width; $minY = $src.Height; $maxX = -1; $maxY = -1
   for ($y = 0; $y -lt $src.Height; $y++) {
     for ($x = 0; $x -lt $src.Width; $x++) {
@@ -65,18 +71,29 @@ function Write-MenuIcon([string]$exe, [string]$path) {
     }
   }
   if ($maxX -lt 0) { $minX = 0; $minY = 0; $maxX = $src.Width - 1; $maxY = $src.Height - 1 }
-  $w = $maxX - $minX + 1; $h = $maxY - $minY + 1
-  $side = [Math]::Max($w, $h)
+  return New-Object System.Drawing.RectangleF $minX, $minY, ($maxX - $minX + 1), ($maxY - $minY + 1)
+}
+
+function New-IconSquare([System.Drawing.Bitmap]$src, [System.Drawing.RectangleF]$rect, [int]$size) {
+  $bmp = New-Object System.Drawing.Bitmap $size, $size
+  $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $scale = $size / [Math]::Max($rect.Width, $rect.Height)
+  $w = $rect.Width * $scale; $h = $rect.Height * $scale
+  $dest = New-Object System.Drawing.RectangleF (($size - $w) / 2), (($size - $h) / 2), $w, $h
+  $g.DrawImage($src, $dest, $rect, [System.Drawing.GraphicsUnit]::Pixel)
+  $g.Dispose()
+  return $bmp
+}
+
+# The menu icon, written as a multi-size ICO of PNG frames.
+function Write-MenuIcon([string]$exe, [string]$path) {
+  $icon = Get-ExeIcon $exe
+  $src = $icon.ToBitmap()
+  $rect = Get-VisibleRect $src
   $frames = foreach ($size in 16, 20, 24, 32, 40, 48, 64, 256) {
-    $bmp = New-Object System.Drawing.Bitmap $size, $size
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-    $scale = $size / $side
-    $dest = New-Object System.Drawing.RectangleF (($size - $w * $scale) / 2), (($size - $h * $scale) / 2), ($w * $scale), ($h * $scale)
-    $srcRect = New-Object System.Drawing.RectangleF $minX, $minY, $w, $h
-    $g.DrawImage($src, $dest, $srcRect, [System.Drawing.GraphicsUnit]::Pixel)
-    $g.Dispose()
+    $bmp = New-IconSquare $src $rect $size
     $ms = New-Object System.IO.MemoryStream
     $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
     $bmp.Dispose()
@@ -104,12 +121,9 @@ function Write-Logos([string]$exe, [string]$assets) {
   New-Item -ItemType Directory -Force $assets | Out-Null
   $icon = Get-ExeIcon $exe
   $src = $icon.ToBitmap()
+  $rect = Get-VisibleRect $src
   foreach ($logo in @{ 'StoreLogo.png' = 50; 'Square44x44Logo.png' = 44; 'Square150x150Logo.png' = 150 }.GetEnumerator()) {
-    $bmp = New-Object System.Drawing.Bitmap $logo.Value, $logo.Value
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $g.DrawImage($src, 0, 0, $logo.Value, $logo.Value)
-    $g.Dispose()
+    $bmp = New-IconSquare $src $rect $logo.Value
     $bmp.Save((Join-Path $assets $logo.Key), [System.Drawing.Imaging.ImageFormat]::Png)
     $bmp.Dispose()
   }
@@ -128,8 +142,7 @@ $commands = @(
      Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
   @{ Name = 'AgentHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
-     # agy.exe has no icon of its own (Windows would show a plain blue square), so it borrows the app's.
-     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-Antigravity },
+     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-AgyIcon },
   @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
      Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }

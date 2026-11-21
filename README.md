@@ -79,8 +79,8 @@ conversations opened in that folder, newest first) once the folder has agy conve
 resuming runs `agy --conversation <id>`. They are read from
 `%USERPROFILE%\.gemini\antigravity-cli\conversation_summaries.db` with the system's
 `winsqlite3.dll`. **Open in Antigravity** (the app) has no submenu and always opens the folder
-directly; neither Antigravity entry uses the start prompt. The CLI entry shows the app's icon,
-because `agy.exe` has none of its own.
+directly; neither Antigravity entry uses the start prompt. `agy.exe` has no icon of its own, so the CLI entry
+shows the Antigravity IDE's dark icon when that is installed, and the app's icon otherwise.
 
 ## Requirements
 
