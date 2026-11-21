@@ -52,9 +52,11 @@ The repo ships no prompt of its own. If you create `%LOCALAPPDATA%\ClaudeHere\st
 with some text (for example a slash command or a short instruction), the submenu's **New session**
 starts with that text as the first message. It applies only where the submenu exists, that is in
 folders that already have sessions; in a folder without sessions the click stays a plain new
-session. Without the file nothing changes. The terminal sends the text at once; the desktop app
-only fills it into the input box, so you press Enter there. Quotes, `;`, `%` and line breaks in the
-file are replaced by spaces. `uninstall.ps1` deletes that folder, the file included.
+session. Without the file nothing changes. The text is sent at once, as `claude "<text>"`. This is
+for the terminal entry only: the desktop app never sends the text of a link (it only fills a
+draft) and does not recognize a slash command there, so the desktop entry is unchanged. Quotes,
+`;`, `%` and line breaks in the file are replaced by spaces. `uninstall.ps1` deletes that folder,
+the file included.
 
 ## How it works
 

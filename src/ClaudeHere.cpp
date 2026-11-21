@@ -590,12 +590,10 @@ static HRESULT OpenUrl(const std::wstring& url) {
     return (INT_PTR)h > 32 ? S_OK : HRESULT_FROM_WIN32(GetLastError());
 }
 
-// `withPrompt` adds the user's start prompt: the desktop app reads `q` (or `prompt`) of claude://code/new.
-static HRESULT LaunchDesktop(const std::wstring& folder, bool withPrompt) {
-    std::wstring url = L"claude://code/new?folder=" + UriEncode(folder);
-    std::wstring prompt = withPrompt ? StartPrompt() : std::wstring();
-    if (!prompt.empty()) url += L"&prompt=" + UriEncode(prompt);
-    return OpenUrl(url);
+// No start prompt here: the app only fills `prompt` into a draft (it never sends a link's text, and
+// a slash command is not recognized there).
+static HRESULT LaunchDesktop(const std::wstring& folder) {
+    return OpenUrl(L"claude://code/new?folder=" + UriEncode(folder));
 }
 
 // claude://resume imports a CLI transcript by its UUID and opens it in the desktop app.
@@ -603,9 +601,10 @@ static HRESULT LaunchDesktopResume(const std::wstring& sessionId) {
     return OpenUrl(L"claude://resume?session=" + sessionId);
 }
 
+// `withPrompt` (terminal only) starts a new session with the user's start prompt.
 static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool withPrompt = false) {
     if (kind == Kind::Terminal) return LaunchTerminal(folder, resumeId, withPrompt);
-    return resumeId.empty() ? LaunchDesktop(folder, withPrompt) : LaunchDesktopResume(resumeId);
+    return resumeId.empty() ? LaunchDesktop(folder) : LaunchDesktopResume(resumeId);
 }
 
 // Root: the top-level entry. Its submenu (only for folders that already have sessions) holds New,

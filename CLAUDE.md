@@ -56,9 +56,11 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   quoting layers (wt, the shell, claude), so `StartPrompt()` turns quotes, `;`, `%` and control
   characters into spaces. pwsh gets it in single quotes inside `-Command "..."`; cmd needs the whole
   `/k` line wrapped in one extra pair of quotes (it strips the first and last quote when there are
-  more than two). The desktop link adds `&prompt=<encoded>`: the app's `code/new` handler reads `q` or
-  `prompt` (read from app.asar), but only fills it into the input box and never sends it (tried by
-  hand); the terminal sends it. A slash command as the prompt is untested.
+  more than two). A slash command works as the prompt in the terminal (`/brifing` loaded the skill).
+  Terminal only: the desktop `code/new` handler reads `q` or `prompt` (read from app.asar), but it
+  only fills a draft and the app offers no auto-send parameter (the allowed extras are `folder`,
+  `file`, `environment`, `runner_pool`); a slash command shows as plain text. The workspace-trust
+  dialog is not the cause (`trusted=true` in the log). So the desktop entry sends no prompt.
 - Desktop app detection: the MSIX package `Claude_pzs8sxrjxfjjc` first, then the per-user
   Squirrel setup's launcher `%LOCALAPPDATA%\AnthropicClaude\claude.exe` (a reinstall can switch
   from one to the other; without a match `GetState` hides the entry). Change both in
