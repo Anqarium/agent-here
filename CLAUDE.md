@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Windows 11 context menu shell extension (`IExplorerCommand`) adding "Open in Claude Code CLI",
-"Open in Claude Code Desktop", "Open in Antigravity CLI" and "Open in Antigravity Desktop". It was called
-`claude-here` until the Antigravity entries made the name too narrow. Behaviour and install steps
+"Open in Claude Code Desktop" and "Open in Antigravity CLI". It was called `claude-here` until the
+Antigravity entry made the name too narrow. Behaviour and install steps
 are in `README.md`.
 
 ## Language
@@ -17,7 +17,7 @@ user in chat stay in Turkish.
 
 ```powershell
 .\build.ps1      # MSVC via vcvars64, outputs to build\
-.\install.ps1    # copies to %LOCALAPPDATA%\AgentHere, registers the four sparse packages
+.\install.ps1    # copies to %LOCALAPPDATA%\AgentHere, registers the three sparse packages
 .\uninstall.ps1  # removes the packages and the install folder
 ```
 
@@ -28,7 +28,7 @@ There are no automated tests. The COM side was checked with a throwaway probe th
 `CoCreateInstance` + `GetTitle`/`GetIcon`/`GetState`/`Invoke` on every CLSID; the menu itself
 can only be checked by hand. Without installing, a probe can `LoadLibrary` `build\AgentHere.dll`,
 call its `DllGetClassObject`, then `GetState` on a folder and `EnumSubCommands` to list the
-session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Desktop,AntigravityCli,Antigravity}\AgentHere.dll`.
+session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Desktop,AntigravityCli}\AgentHere.dll`.
 
 ## Notes
 
@@ -38,24 +38,25 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
 - Register from `%LOCALAPPDATA%\AgentHere`, never from the repo: the loaded DLL gets locked.
   `install.ps1` first stops the `dllhost` processes holding it.
 - The commands are deliberately separate packages (`AgentHere.Terminal`, `AgentHere.Desktop`,
-  `AgentHere.AntigravityCli`, `AgentHere.Antigravity`): Windows may group several verbs of one
-  package into a submenu.
-- Antigravity entries: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
-  Claude terminal entry, without resume or start prompt; the app entry runs
-  `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe "<folder>"`. The CLI entry also has the
-  session submenu (`ScanAgySessions`): rows of `~\.gemini\antigravity-cli\conversation_summaries.db`
+  `AgentHere.AntigravityCli`): Windows may group several verbs of one package into a submenu.
+- Antigravity CLI entry: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
+  Claude terminal entry, without the start prompt. It has the session submenu (`ScanAgySessions`): rows of `~\.gemini\antigravity-cli\conversation_summaries.db`
   read with the system's `winsqlite3.dll`, matched by decoding `workspace_uris` (file:/// URIs) and
   comparing with the folder; sub-agent rows (`parent_conversation_id`) and never-used ones
   (`last_modified_time` 0001-01-01) are hidden; many older rows have an empty `title`, then only the
   time shows; resume is `agy --conversation <id>`. The `datetime` column has numeric affinity, so a
-  bare `> '2000'` compares wrongly: use `substr(...) >= '2000'`. The app entry has no submenu (no
-  known way to resume a conversation there). `agy.exe` has no icon resource, so `install.ps1` takes
-  the CLI entry's icon from `Programs\Antigravity IDE\Antigravity IDE.exe` (the same "A" on a dark
-  grid tile, set apart from the app entry like Claude Code from Claude Desktop), falling back to
-  `Antigravity.exe` (`IconExe` / `Find-AgyIcon`). No CLI-specific icon exists online either. The
-  IDE's tile has square corners, so the entry's `Round = 0.22` clips it to the Claude CLI tile's radius. The app path is the install that
-  registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
-  own Explorer command DLL) is a second install that is not used.
+  bare `> '2000'` compares wrongly: use `substr(...) >= '2000'`. `agy.exe` has no icon resource, so
+  `install.ps1` takes the entry's icon from `Programs\Antigravity IDE\Antigravity IDE.exe` (the "A"
+  on a dark grid tile, like the Claude CLI's tile), falling back to
+  `Programs\antigravity\Antigravity.exe` (`IconExe` / `Find-AgyIcon`). No CLI-specific icon exists
+  online either. The IDE's tile has square corners, so the entry's `Round = 0.22` clips it to the
+  Claude CLI tile's radius.
+- An "Open in Antigravity Desktop" entry existed and was dropped (maintainer's decision): the
+  Antigravity app (`Programs\antigravity`, 2.26+) is an agent-manager hub, not an editor. Its main
+  process ignores a folder argument (only `antigravity://` links and `--ssh-host=` are read) and its
+  UI, served by `resources\bin\language_server.exe` on a local port, routes deep links only for
+  plugins/customizations, `teleport/ai_studio` and sign-in, so nothing opens a folder from outside.
+  `install.ps1` and `uninstall.ps1` still remove the old `AgentHere.Antigravity` package.
 - The CLSIDs live in both `src/AgentHere.cpp` and `install.ps1`; change them together.
 - Menu icons: `GetIcon` returns `icon.ico` next to the DLL, falling back to the exe's icon 0.
   `install.ps1` generates it from each exe, cropped to the visible area, because the CLI's

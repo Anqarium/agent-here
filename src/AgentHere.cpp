@@ -1,8 +1,7 @@
-// IExplorerCommand server that adds four commands to the Windows 11 context menu:
+// IExplorerCommand server that adds three commands to the Windows 11 context menu:
 //   - Terminal: opens `claude` (Claude Code CLI) in Windows Terminal, in the clicked folder.
 //   - Desktop: starts a new Claude Code session on that folder in the Claude desktop app.
 //   - AgyTerminal: opens `agy` (Antigravity CLI) in Windows Terminal, in the clicked folder.
-//   - Antigravity: opens the clicked folder in the Antigravity app.
 // Each command is registered by its own sparse package (install.ps1); the DLL runs in dllhost.exe.
 
 #define WIN32_LEAN_AND_MEAN
@@ -36,8 +35,6 @@ static const CLSID CLSID_ClaudeTerminal = {0x0f55b8ab, 0x4947, 0x4eab, {0xb1, 0x
 static const CLSID CLSID_ClaudeDesktop = {0x59847620, 0x2a77, 0x4b45, {0xad, 0x83, 0xef, 0x51, 0x2e, 0x44, 0x3b, 0x3b}};
 // {ABC40DD4-5780-41DF-84EA-CD2008A2578D}
 static const CLSID CLSID_AgyTerminal = {0xabc40dd4, 0x5780, 0x41df, {0x84, 0xea, 0xcd, 0x20, 0x08, 0xa2, 0x57, 0x8d}};
-// {7D7030D2-A5B9-4D8F-BB1E-DA9B44981025}
-static const CLSID CLSID_Antigravity = {0x7d7030d2, 0xa5b9, 0x4d8f, {0xbb, 0x1e, 0xda, 0x9b, 0x44, 0x98, 0x10, 0x25}};
 
 // Package family of the Claude desktop app (the publisher hash is fixed across versions).
 static const wchar_t kDesktopFamily[] = L"Claude_pzs8sxrjxfjjc";
@@ -46,7 +43,7 @@ static LONG g_objects = 0;
 static LONG g_locks = 0;
 static HMODULE g_module = nullptr;
 
-enum class Kind { Terminal, Desktop, AgyTerminal, Antigravity };
+enum class Kind { Terminal, Desktop, AgyTerminal };
 
 static std::wstring EnvPath(const wchar_t* var, const wchar_t* tail) {
     wchar_t buf[MAX_PATH];
@@ -101,19 +98,12 @@ static std::wstring AgyCliPath() {
     return L"";
 }
 
-// Antigravity app: the install that registers the antigravity:// protocol; empty when not installed.
-static std::wstring AntigravityAppPath() {
-    std::wstring p = EnvPath(L"LOCALAPPDATA", L"\\Programs\\antigravity\\Antigravity.exe");
-    return !p.empty() && FileExists(p) ? p : L"";
-}
-
 // The exe a command needs (its availability and fallback icon); empty when it is not installed.
 static std::wstring KindExePath(Kind kind) {
     switch (kind) {
     case Kind::Terminal: return ClaudeCliPath();
     case Kind::Desktop: return DesktopExePath();
     case Kind::AgyTerminal: return AgyCliPath();
-    case Kind::Antigravity: return AntigravityAppPath();
     }
     return L"";
 }
@@ -123,7 +113,6 @@ static const CLSID& KindClsid(Kind kind) {
     case Kind::Terminal: return CLSID_ClaudeTerminal;
     case Kind::Desktop: return CLSID_ClaudeDesktop;
     case Kind::AgyTerminal: return CLSID_AgyTerminal;
-    case Kind::Antigravity: return CLSID_Antigravity;
     }
     return CLSID_ClaudeTerminal;
 }
@@ -766,16 +755,6 @@ static HRESULT LaunchDesktopResume(const std::wstring& sessionId) {
     return OpenUrl(L"claude://resume?session=" + sessionId);
 }
 
-// Starts an app with the folder as its argument; a trailing backslash is escaped as in LaunchTerminal.
-static HRESULT LaunchApp(const std::wstring& exe, const std::wstring& folder) {
-    if (exe.empty()) return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-    std::wstring dir = folder;
-    if (!dir.empty() && dir.back() == L'\\') dir += L'.';
-    std::wstring args = L"\"" + dir + L"\"";
-    HINSTANCE h = ShellExecuteW(nullptr, L"open", exe.c_str(), args.c_str(), folder.c_str(), SW_SHOWNORMAL);
-    return (INT_PTR)h > 32 ? S_OK : HRESULT_FROM_WIN32(GetLastError());
-}
-
 // `withPrompt` (Claude terminal only) starts a new session with the user's start prompt.
 // A non-empty resumeId resumes that Claude session instead.
 static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring& resumeId, bool withPrompt = false) {
@@ -791,8 +770,6 @@ static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring&
         std::wstring args = resumeId.empty() ? std::wstring() : L" --conversation " + resumeId;
         return LaunchTerminal(AgyCliPath(), folder, args, L"");
     }
-    case Kind::Antigravity:
-        return LaunchApp(AntigravityAppPath(), folder);
     }
     return E_FAIL;
 }
@@ -908,7 +885,6 @@ public:
         case Kind::Terminal: title = tr ? L"Claude Code CLI'da Aç" : L"Open in Claude Code CLI"; break;
         case Kind::Desktop: title = tr ? L"Claude Code Desktop'ta Aç" : L"Open in Claude Code Desktop"; break;
         case Kind::AgyTerminal: title = tr ? L"Antigravity CLI'da Aç" : L"Open in Antigravity CLI"; break;
-        case Kind::Antigravity: title = tr ? L"Antigravity Desktop'ta Aç" : L"Open in Antigravity Desktop"; break;
         }
         return SHStrDupW(title, name);
     }
@@ -1009,8 +985,7 @@ private:
 
     // Sessions are read once per folder, the first time the root is asked for its flags.
     bool HasSessions() {
-        // The Antigravity app has no way to resume a conversation, so its entry never has a submenu.
-        if (folder_.empty() || kind_ == Kind::Antigravity) return false;
+        if (folder_.empty()) return false;
         if (!scanned_) {
             sessions_ = kind_ == Kind::AgyTerminal ? ScanAgySessions(folder_) : ScanSessions(folder_);
             scanned_ = true;
@@ -1080,7 +1055,6 @@ STDAPI DllGetClassObject(REFCLSID clsid, REFIID riid, void** ppv) {
     if (clsid == CLSID_ClaudeTerminal) kind = Kind::Terminal;
     else if (clsid == CLSID_ClaudeDesktop) kind = Kind::Desktop;
     else if (clsid == CLSID_AgyTerminal) kind = Kind::AgyTerminal;
-    else if (clsid == CLSID_Antigravity) kind = Kind::Antigravity;
     else return CLASS_E_CLASSNOTAVAILABLE;
     Factory* f = new (std::nothrow) Factory(kind);
     if (!f) return E_OUTOFMEMORY;

@@ -36,19 +36,14 @@ function Find-AgyCli {
   return $null
 }
 
-# The app that registers the antigravity:// protocol.
-function Find-Antigravity {
-  $exe = Join-Path $env:LOCALAPPDATA 'Programs\antigravity\Antigravity.exe'
-  if (Test-Path $exe) { return $exe }
-  return $null
-}
-
-# Icon for the CLI entry: the Antigravity IDE's dark tile sets it apart from the app entry, as the
-# Claude CLI's dark tile does from Claude Desktop. agy.exe has no icon of its own.
+# Icon for the CLI entry (agy.exe has no icon of its own): the Antigravity IDE's dark tile, like the
+# Claude CLI's, else the Antigravity app's icon.
 function Find-AgyIcon {
-  $ide = Join-Path $env:LOCALAPPDATA 'Programs\Antigravity IDE\Antigravity IDE.exe'
-  if (Test-Path $ide) { return $ide }
-  return Find-Antigravity
+  foreach ($rel in 'Programs\Antigravity IDE\Antigravity IDE.exe', 'Programs\antigravity\Antigravity.exe') {
+    $exe = Join-Path $env:LOCALAPPDATA $rel
+    if (Test-Path $exe) { return $exe }
+  }
+  return $null
 }
 
 function Get-ExeIcon([string]$exe) {
@@ -162,16 +157,22 @@ $commands = @(
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
      Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-AgyIcon
      # The IDE's tile has square corners; round them like the Claude CLI's tile (~22 % radius).
-     Round = 0.22 },
-  @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
-     Display = $(if ($tr) { 'Antigravity Desktop (sağ tık)' } else { 'Antigravity Desktop (context menu)' })
-     Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
+     Round = 0.22 }
 )
 
 # Stop the surrogate (dllhost) processes holding the DLL, or the copy hits a locked file.
 Get-Process dllhost -ErrorAction SilentlyContinue | Where-Object {
   try { $_.Modules.FileName -like "$base\*" } catch { $false }
 } | Stop-Process -Force
+
+# Entries that were dropped: the Antigravity app ignores a folder argument and has no deep link
+# that opens one, so its entry could only start the app.
+foreach ($name in 'AgentHere.Antigravity') {
+  $old = Get-AppxPackage -Name $name
+  if ($old) { Remove-AppxPackage -Package $old.PackageFullName; Write-Host "Removed: $name" }
+}
+$dropped = Join-Path $base 'Antigravity'
+if (Test-Path $dropped) { Remove-Item $dropped -Recurse -Force }
 
 $template = Get-Content (Join-Path $root 'package\AppxManifest.template.xml') -Raw -Encoding utf8
 

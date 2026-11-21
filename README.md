@@ -1,6 +1,6 @@
 # agent-here
 
-Adds four entries to the **new Windows 11 context menu** (the short one, not only
+Adds three entries to the **new Windows 11 context menu** (the short one, not only
 "Show more options"):
 
 - **Open in Claude Code CLI**: opens `claude` (the Claude Code CLI) in Windows Terminal, in the
@@ -9,10 +9,10 @@ Adds four entries to the **new Windows 11 context menu** (the short one, not onl
   desktop app.
 - **Open in Antigravity CLI**: opens `agy` (the Antigravity CLI) in Windows Terminal, in the
   folder you clicked.
-- **Open in Antigravity Desktop**: opens the folder you clicked in the Antigravity app.
 
 The Claude entries show up when `claude` or the Claude desktop app is installed; the Antigravity
-entries when `agy` or the Antigravity app (`%LOCALAPPDATA%\Programs\antigravity`) is installed.
+entry when `agy` is installed. There is no entry for the Antigravity desktop app: it ignores a
+folder passed to it and has no link that opens one.
 They show up when you right-click a folder and when you right-click empty space inside one.
 The titles follow the Windows display language: Turkish on a Turkish UI, English otherwise.
 
@@ -78,9 +78,8 @@ each can be moved in or out of the main menu on its own under **Settings → Per
 conversations opened in that folder, newest first) once the folder has agy conversations;
 resuming runs `agy --conversation <id>`. They are read from
 `%USERPROFILE%\.gemini\antigravity-cli\conversation_summaries.db` with the system's
-`winsqlite3.dll`. **Open in Antigravity Desktop** (the app) has no submenu and always opens the folder
-directly; neither Antigravity entry uses the start prompt. `agy.exe` has no icon of its own, so the CLI entry
-shows the Antigravity IDE's dark icon when that is installed, and the app's icon otherwise.
+`winsqlite3.dll`. It does not use the start prompt. `agy.exe` has no icon of its own, so the entry
+shows the Antigravity IDE's dark icon when that is installed, and the Antigravity app's icon otherwise.
 
 ## Requirements
 
@@ -89,8 +88,7 @@ shows the Antigravity IDE's dark icon when that is installed, and the app's icon
   (`winget install Microsoft.WindowsSDK.10.0.26100`).
 - Claude Code CLI (`%USERPROFILE%\.local\bin\claude.exe` or on `PATH`), and optionally the
   Claude desktop app (the MSIX package or the per-user setup in `%LOCALAPPDATA%\AnthropicClaude`).
-- Optionally the Antigravity CLI (`%LOCALAPPDATA%\agy\bin\agy.exe` or on `PATH`) and the
-  Antigravity app (`%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe`).
+- Optionally the Antigravity CLI (`%LOCALAPPDATA%\agy\bin\agy.exe` or on `PATH`).
 
 ## Install
 
