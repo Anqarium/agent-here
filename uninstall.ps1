@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $base = Join-Path $env:LOCALAPPDATA 'ClaudeHere'
 
-foreach ($name in 'ClaudeHere.Terminal', 'ClaudeHere.Desktop') {
+foreach ($name in 'ClaudeHere.Terminal', 'ClaudeHere.Desktop', 'ClaudeHere.AntigravityCli', 'ClaudeHere.Antigravity') {
   $pkg = Get-AppxPackage -Name $name
   if ($pkg) { Remove-AppxPackage -Package $pkg.PackageFullName; Write-Host "Removed: $name" }
 }

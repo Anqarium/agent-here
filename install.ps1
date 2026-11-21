@@ -28,6 +28,21 @@ function Find-ClaudeCli {
   return $null
 }
 
+function Find-AgyCli {
+  $p = Join-Path $env:LOCALAPPDATA 'agy\bin\agy.exe'
+  if (Test-Path $p) { return $p }
+  $c = Get-Command agy.exe -ErrorAction SilentlyContinue
+  if ($c) { return $c.Source }
+  return $null
+}
+
+# The app that registers the antigravity:// protocol.
+function Find-Antigravity {
+  $exe = Join-Path $env:LOCALAPPDATA 'Programs\antigravity\Antigravity.exe'
+  if (Test-Path $exe) { return $exe }
+  return $null
+}
+
 function Get-ExeIcon([string]$exe) {
   $icon = try { [System.Drawing.Icon]::ExtractIcon($exe, 0, 256) } catch { $null }
   if (-not $icon) { $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe) }
@@ -110,7 +125,13 @@ $commands = @(
      Clsid = '0f55b8ab-4947-4eab-b1f7-4e8c0db27ac9'; Exe = Find-ClaudeCli },
   @{ Name = 'ClaudeHere.Desktop'; Folder = 'Desktop'; Verb = 'ClaudeDesktop'
      Display = $(if ($tr) { 'Claude Masaüstü (sağ tık)' } else { 'Claude Desktop (context menu)' })
-     Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe }
+     Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
+  @{ Name = 'ClaudeHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
+     Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
+     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli },
+  @{ Name = 'ClaudeHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
+     Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
+     Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
 )
 
 # Stop the surrogate (dllhost) processes holding the DLL, or the copy hits a locked file.

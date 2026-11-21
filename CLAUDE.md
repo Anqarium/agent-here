@@ -32,8 +32,15 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   trusted in TrustedPeople (admin).
 - Register from `%LOCALAPPDATA%\ClaudeHere`, never from the repo: the loaded DLL gets locked.
   `install.ps1` first stops the `dllhost` processes holding it.
-- The two commands are deliberately separate packages (`ClaudeHere.Terminal`,
-  `ClaudeHere.Desktop`): Windows may group several verbs of one package into a submenu.
+- The commands are deliberately separate packages (`ClaudeHere.Terminal`, `ClaudeHere.Desktop`,
+  `ClaudeHere.AntigravityCli`, `ClaudeHere.Antigravity`): Windows may group several verbs of one
+  package into a submenu.
+- Antigravity entries: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
+  Claude terminal entry, without resume or start prompt; the app entry runs
+  `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe "<folder>"`. Only the Claude entries list
+  sessions (`HasSessions()`); the Antigravity ones never do. The app path is the install that
+  registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
+  own Explorer command DLL) is a second install that is not used.
 - The CLSIDs live in both `src/ClaudeHere.cpp` and `install.ps1`; change them together.
 - Menu icons: `GetIcon` returns `icon.ico` next to the DLL, falling back to the exe's icon 0.
   `install.ps1` generates it from each exe, cropped to the visible area, because the CLI's
