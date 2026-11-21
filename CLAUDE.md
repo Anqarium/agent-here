@@ -58,6 +58,14 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
   `install.ps1` generates it from each exe, cropped to the visible area, because the CLI's
   own icon has about 2 px of padding at 32 px and the desktop app's has none (they looked
   different in size). No icon art is committed to the repo.
+- Package logos (Settings → Context menu → App extensions): Windows resolves `Logo` against the
+  external location (`%LOCALAPPDATA%\AgentHere\<cmd>\Assets\`), not the manifest's `package\`
+  folder, so `install.ps1` writes them to both; with only `package\Assets` Settings showed a
+  placeholder. Check with WinRT `PackageManager.FindPackageForUser(...).Logo` from Windows
+  PowerShell 5.1 (pwsh 7 cannot load WinRT types).
+- Re-registering the same CLSIDs under new package names (the claude-here → agent-here rename)
+  left the already running Explorer without the entries; `Stop-Process explorer` does not work
+  from Claude's shell, so the maintainer restarts Explorer (Task Manager) or signs out.
 - Language: the menu title uses `GetUserDefaultUILanguage` (the display language Explorer
   uses); the package name uses `Get-UICulture` at install time. Windows Terminal follows the
   preferred-languages list instead, so its own entry can be in a different language.

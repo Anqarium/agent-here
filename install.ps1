@@ -156,7 +156,10 @@ foreach ($c in $commands) {
   New-Item -ItemType Directory -Force $pkg | Out-Null
   Copy-Item (Join-Path $build 'AgentHere.dll'), (Join-Path $build 'AgentHereStub.exe') $dir -Force
   $iconExe = if ($c.IconExe) { $c.IconExe } else { $c.Exe }
+  # Registration looks for the logos next to the manifest, but Windows resolves them against the
+  # external location (Settings showed a placeholder icon otherwise), so they go to both.
   Write-Logos $iconExe (Join-Path $pkg 'Assets')
+  Copy-Item (Join-Path $pkg 'Assets') $dir -Recurse -Force
   Write-MenuIcon $iconExe (Join-Path $dir 'icon.ico')
 
   $manifest = $template.Replace('{{NAME}}', $c.Name).Replace('{{DISPLAY}}', $c.Display).
