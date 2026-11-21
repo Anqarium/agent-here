@@ -74,7 +74,8 @@ function Get-VisibleRect([System.Drawing.Bitmap]$src) {
   return New-Object System.Drawing.RectangleF $minX, $minY, ($maxX - $minX + 1), ($maxY - $minY + 1)
 }
 
-function New-IconSquare([System.Drawing.Bitmap]$src, [System.Drawing.RectangleF]$rect, [int]$size) {
+# $round > 0 clips the result to a rounded square (corner radius = $round * size).
+function New-IconSquare([System.Drawing.Bitmap]$src, [System.Drawing.RectangleF]$rect, [int]$size, [double]$round = 0) {
   $bmp = New-Object System.Drawing.Bitmap $size, $size
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
@@ -84,16 +85,33 @@ function New-IconSquare([System.Drawing.Bitmap]$src, [System.Drawing.RectangleF]
   $dest = New-Object System.Drawing.RectangleF (($size - $w) / 2), (($size - $h) / 2), $w, $h
   $g.DrawImage($src, $dest, $rect, [System.Drawing.GraphicsUnit]::Pixel)
   $g.Dispose()
-  return $bmp
+  if ($round -le 0) { return $bmp }
+
+  # Fill an anti-aliased rounded square with the drawn image as texture: smooth corners.
+  $out = New-Object System.Drawing.Bitmap $size, $size
+  $g = [System.Drawing.Graphics]::FromImage($out)
+  $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $d = 2 * $round * $size
+  $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $path.AddArc(0, 0, $d, $d, 180, 90)
+  $path.AddArc($size - $d, 0, $d, $d, 270, 90)
+  $path.AddArc($size - $d, $size - $d, $d, $d, 0, 90)
+  $path.AddArc(0, $size - $d, $d, $d, 90, 90)
+  $path.CloseFigure()
+  $brush = New-Object System.Drawing.TextureBrush $bmp
+  $g.FillPath($brush, $path)
+  $brush.Dispose(); $path.Dispose(); $g.Dispose(); $bmp.Dispose()
+  return $out
 }
 
 # The menu icon, written as a multi-size ICO of PNG frames.
-function Write-MenuIcon([string]$exe, [string]$path) {
+function Write-MenuIcon([string]$exe, [string]$path, [double]$round = 0) {
   $icon = Get-ExeIcon $exe
   $src = $icon.ToBitmap()
   $rect = Get-VisibleRect $src
   $frames = foreach ($size in 16, 20, 24, 32, 40, 48, 64, 256) {
-    $bmp = New-IconSquare $src $rect $size
+    $bmp = New-IconSquare $src $rect $size $round
     $ms = New-Object System.IO.MemoryStream
     $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
     $bmp.Dispose()
@@ -117,13 +135,13 @@ function Write-MenuIcon([string]$exe, [string]$path) {
 }
 
 # Package logos (shown on the App extensions settings page) are made from the exe's icon.
-function Write-Logos([string]$exe, [string]$assets) {
+function Write-Logos([string]$exe, [string]$assets, [double]$round = 0) {
   New-Item -ItemType Directory -Force $assets | Out-Null
   $icon = Get-ExeIcon $exe
   $src = $icon.ToBitmap()
   $rect = Get-VisibleRect $src
   foreach ($logo in @{ 'StoreLogo.png' = 50; 'Square44x44Logo.png' = 44; 'Square150x150Logo.png' = 150 }.GetEnumerator()) {
-    $bmp = New-IconSquare $src $rect $logo.Value
+    $bmp = New-IconSquare $src $rect $logo.Value $round
     $bmp.Save((Join-Path $assets $logo.Key), [System.Drawing.Imaging.ImageFormat]::Png)
     $bmp.Dispose()
   }
@@ -142,7 +160,9 @@ $commands = @(
      Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
   @{ Name = 'AgentHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
-     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-AgyIcon },
+     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-AgyIcon
+     # The IDE's tile has square corners; round them like the Claude CLI's tile (~22 % radius).
+     Round = 0.22 },
   @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
      Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
@@ -171,9 +191,10 @@ foreach ($c in $commands) {
   $iconExe = if ($c.IconExe) { $c.IconExe } else { $c.Exe }
   # Registration looks for the logos next to the manifest, but Windows resolves them against the
   # external location (Settings showed a placeholder icon otherwise), so they go to both.
-  Write-Logos $iconExe (Join-Path $pkg 'Assets')
+  $round = if ($c.Round) { $c.Round } else { 0 }
+  Write-Logos $iconExe (Join-Path $pkg 'Assets') $round
   Copy-Item (Join-Path $pkg 'Assets') $dir -Recurse -Force
-  Write-MenuIcon $iconExe (Join-Path $dir 'icon.ico')
+  Write-MenuIcon $iconExe (Join-Path $dir 'icon.ico') $round
 
   $manifest = $template.Replace('{{NAME}}', $c.Name).Replace('{{DISPLAY}}', $c.Display).
     Replace('{{VERB}}', $c.Verb).Replace('{{CLSID}}', $c.Clsid).Replace('{{VERSION}}', $version)

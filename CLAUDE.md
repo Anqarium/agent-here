@@ -52,7 +52,8 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
   known way to resume a conversation there). `agy.exe` has no icon resource, so `install.ps1` takes
   the CLI entry's icon from `Programs\Antigravity IDE\Antigravity IDE.exe` (the same "A" on a dark
   grid tile, set apart from the app entry like Claude Code from Claude Desktop), falling back to
-  `Antigravity.exe` (`IconExe` / `Find-AgyIcon`). No CLI-specific icon exists online either. The app path is the install that
+  `Antigravity.exe` (`IconExe` / `Find-AgyIcon`). No CLI-specific icon exists online either. The
+  IDE's tile has square corners, so the entry's `Round = 0.22` clips it to the Claude CLI tile's radius. The app path is the install that
   registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
   own Explorer command DLL) is a second install that is not used.
 - The CLSIDs live in both `src/AgentHere.cpp` and `install.ps1`; change them together.
