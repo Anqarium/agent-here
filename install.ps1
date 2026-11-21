@@ -153,10 +153,10 @@ function Write-Logos([string]$exe, [string]$assets, [double]$round = 0) {
 $tr = (Get-UICulture).TwoLetterISOLanguageName -eq 'tr'
 $commands = @(
   @{ Name = 'AgentHere.Terminal'; Folder = 'Terminal'; Verb = 'ClaudeCode'
-     Display = $(if ($tr) { 'Claude Code (sağ tık)' } else { 'Claude Code (context menu)' })
+     Display = $(if ($tr) { 'Claude Code CLI (sağ tık)' } else { 'Claude Code CLI (context menu)' })
      Clsid = '0f55b8ab-4947-4eab-b1f7-4e8c0db27ac9'; Exe = Find-ClaudeCli },
   @{ Name = 'AgentHere.Desktop'; Folder = 'Desktop'; Verb = 'ClaudeDesktop'
-     Display = $(if ($tr) { 'Claude Masaüstü (sağ tık)' } else { 'Claude Desktop (context menu)' })
+     Display = $(if ($tr) { 'Claude Code Desktop (sağ tık)' } else { 'Claude Code Desktop (context menu)' })
      Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
   @{ Name = 'AgentHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
@@ -164,7 +164,7 @@ $commands = @(
      # The IDE's tile has square corners; round them like the Claude CLI's tile (~22 % radius).
      Round = 0.22 },
   @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
-     Display = $(if ($tr) { 'Antigravity IDE (sağ tık)' } else { 'Antigravity IDE (context menu)' })
+     Display = $(if ($tr) { 'Antigravity Desktop (sağ tık)' } else { 'Antigravity Desktop (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
 )
 

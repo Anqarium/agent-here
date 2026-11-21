@@ -905,10 +905,10 @@ public:
         }
         const wchar_t* title = nullptr;
         switch (kind_) {
-        case Kind::Terminal: title = tr ? L"Claude Code'da Aç" : L"Open in Claude Code"; break;
-        case Kind::Desktop: title = tr ? L"Claude Masaüstünde Aç" : L"Open in Claude Desktop"; break;
+        case Kind::Terminal: title = tr ? L"Claude Code CLI'da Aç" : L"Open in Claude Code CLI"; break;
+        case Kind::Desktop: title = tr ? L"Claude Code Desktop'ta Aç" : L"Open in Claude Code Desktop"; break;
         case Kind::AgyTerminal: title = tr ? L"Antigravity CLI'da Aç" : L"Open in Antigravity CLI"; break;
-        case Kind::Antigravity: title = tr ? L"Antigravity IDE'de Aç" : L"Open in Antigravity IDE"; break;
+        case Kind::Antigravity: title = tr ? L"Antigravity Desktop'ta Aç" : L"Open in Antigravity Desktop"; break;
         }
         return SHStrDupW(title, name);
     }

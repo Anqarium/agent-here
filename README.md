@@ -3,13 +3,13 @@
 Adds four entries to the **new Windows 11 context menu** (the short one, not only
 "Show more options"):
 
-- **Open in Claude Code**: opens `claude` (the Claude Code CLI) in Windows Terminal, in the
+- **Open in Claude Code CLI**: opens `claude` (the Claude Code CLI) in Windows Terminal, in the
   folder you clicked.
-- **Open in Claude Desktop**: starts a new Claude Code session on that folder in the Claude
+- **Open in Claude Code Desktop**: starts a new Claude Code session on that folder in the Claude
   desktop app.
 - **Open in Antigravity CLI**: opens `agy` (the Antigravity CLI) in Windows Terminal, in the
   folder you clicked.
-- **Open in Antigravity IDE**: opens the folder you clicked in the Antigravity app.
+- **Open in Antigravity Desktop**: opens the folder you clicked in the Antigravity app.
 
 The Claude entries show up when `claude` or the Claude desktop app is installed; the Antigravity
 entries when `agy` or the Antigravity app (`%LOCALAPPDATA%\Programs\antigravity`) is installed.
@@ -20,7 +20,7 @@ The titles follow the Windows display language: Turkish on a Turkish UI, English
 
 ## How it behaves
 
-**Open in Claude Code** uses Windows Terminal's **default profile**, so the tab gets that
+**Open in Claude Code CLI** uses Windows Terminal's **default profile**, so the tab gets that
 profile's icon, colours and title, and `claude` starts *inside* the profile's shell:
 
 | Default profile | What runs |
@@ -33,7 +33,7 @@ Your shell profile loads, and when `claude` exits you are left in the shell in t
 The default profile is read on every click, so changing it in Windows Terminal takes effect
 at once. Without Windows Terminal, `claude` opens in the default console.
 
-**Open in Claude Desktop** opens `claude://code/new?folder=<path>`. The desktop app asks for
+**Open in Claude Code Desktop** opens `claude://code/new?folder=<path>`. The desktop app asks for
 confirmation every time a folder comes from another app; that is the app's own safety
 check, and there is no setting to turn it off. The entry is hidden when the desktop app is
 not installed, and the terminal entry is hidden when `claude` is not found.
@@ -78,7 +78,7 @@ each can be moved in or out of the main menu on its own under **Settings → Per
 conversations opened in that folder, newest first) once the folder has agy conversations;
 resuming runs `agy --conversation <id>`. They are read from
 `%USERPROFILE%\.gemini\antigravity-cli\conversation_summaries.db` with the system's
-`winsqlite3.dll`. **Open in Antigravity IDE** (the app) has no submenu and always opens the folder
+`winsqlite3.dll`. **Open in Antigravity Desktop** (the app) has no submenu and always opens the folder
 directly; neither Antigravity entry uses the start prompt. `agy.exe` has no icon of its own, so the CLI entry
 shows the Antigravity IDE's dark icon when that is installed, and the app's icon otherwise.
 

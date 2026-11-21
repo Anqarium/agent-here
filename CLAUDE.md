@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-Windows 11 context menu shell extension (`IExplorerCommand`) adding "Open in Claude Code",
-"Open in Claude Desktop", "Open in Antigravity CLI" and "Open in Antigravity IDE". It was called
+Windows 11 context menu shell extension (`IExplorerCommand`) adding "Open in Claude Code CLI",
+"Open in Claude Code Desktop", "Open in Antigravity CLI" and "Open in Antigravity Desktop". It was called
 `claude-here` until the Antigravity entries made the name too narrow. Behaviour and install steps
 are in `README.md`.
 
@@ -72,8 +72,8 @@ session submenu. Installed copies are `%LOCALAPPDATA%\AgentHere\{Terminal,Deskto
   left the already running Explorer without the entries; `Stop-Process explorer` does not work
   from Claude's shell, so the maintainer restarts Explorer (Task Manager) or signs out.
 - Menu order: Windows sorts these entries by title, not by registration order or package name.
-  The app entry is titled "Antigravity IDE" so the CLI entry sorts above it, as Claude Code does
-  above Claude Desktop; keep that in mind before renaming a title.
+  The titles end in "CLI" / "Desktop" so each CLI entry sorts above its desktop entry (the
+  maintainer's naming); keep that in mind before renaming a title.
 - Language: the menu title uses `GetUserDefaultUILanguage` (the display language Explorer
   uses); the package name uses `Get-UICulture` at install time. Windows Terminal follows the
   preferred-languages list instead, so its own entry can be in a different language.
