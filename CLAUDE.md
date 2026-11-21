@@ -37,8 +37,15 @@ session submenu. Installed copies are `%LOCALAPPDATA%\ClaudeHere\{Terminal,Deskt
   package into a submenu.
 - Antigravity entries: `agy` (`%LOCALAPPDATA%\agy\bin\agy.exe`) runs in Windows Terminal like the
   Claude terminal entry, without resume or start prompt; the app entry runs
-  `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe "<folder>"`. Only the Claude entries list
-  sessions (`HasSessions()`); the Antigravity ones never do. The app path is the install that
+  `%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe "<folder>"`. The CLI entry also has the
+  session submenu (`ScanAgySessions`): rows of `~\.gemini\antigravity-cli\conversation_summaries.db`
+  read with the system's `winsqlite3.dll`, matched by decoding `workspace_uris` (file:/// URIs) and
+  comparing with the folder; sub-agent rows (`parent_conversation_id`) and never-used ones
+  (`last_modified_time` 0001-01-01) are hidden; many older rows have an empty `title`, then only the
+  time shows; resume is `agy --conversation <id>`. The `datetime` column has numeric affinity, so a
+  bare `> '2000'` compares wrongly: use `substr(...) >= '2000'`. The app entry has no submenu (no
+  known way to resume a conversation there). `agy.exe` has no icon resource, so `install.ps1` takes
+  the CLI entry's icon from `Antigravity.exe` (`IconExe`). The app path is the install that
   registers the `antigravity://` protocol (2.26.0); `Programs\Antigravity IDE` (2.7.0, with its
   own Explorer command DLL) is a second install that is not used.
 - The CLSIDs live in both `src/ClaudeHere.cpp` and `install.ps1`; change them together.

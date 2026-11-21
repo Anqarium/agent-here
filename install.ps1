@@ -128,7 +128,8 @@ $commands = @(
      Clsid = '59847620-2a77-4b45-ad83-ef512e443b3b'; Exe = Find-DesktopExe },
   @{ Name = 'ClaudeHere.AntigravityCli'; Folder = 'AntigravityCli'; Verb = 'AntigravityCli'
      Display = $(if ($tr) { 'Antigravity CLI (sağ tık)' } else { 'Antigravity CLI (context menu)' })
-     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli },
+     # agy.exe has no icon of its own (Windows would show a plain blue square), so it borrows the app's.
+     Clsid = 'abc40dd4-5780-41df-84ea-cd2008a2578d'; Exe = Find-AgyCli; IconExe = Find-Antigravity },
   @{ Name = 'ClaudeHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
      Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
@@ -154,8 +155,9 @@ foreach ($c in $commands) {
   $pkg = Join-Path $dir 'package'
   New-Item -ItemType Directory -Force $pkg | Out-Null
   Copy-Item (Join-Path $build 'ClaudeHere.dll'), (Join-Path $build 'ClaudeHereStub.exe') $dir -Force
-  Write-Logos $c.Exe (Join-Path $pkg 'Assets')
-  Write-MenuIcon $c.Exe (Join-Path $dir 'icon.ico')
+  $iconExe = if ($c.IconExe) { $c.IconExe } else { $c.Exe }
+  Write-Logos $iconExe (Join-Path $pkg 'Assets')
+  Write-MenuIcon $iconExe (Join-Path $dir 'icon.ico')
 
   $manifest = $template.Replace('{{NAME}}', $c.Name).Replace('{{DISPLAY}}', $c.Display).
     Replace('{{VERB}}', $c.Verb).Replace('{{CLSID}}', $c.Clsid).Replace('{{VERSION}}', $version)

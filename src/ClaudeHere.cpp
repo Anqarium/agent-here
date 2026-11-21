@@ -14,6 +14,8 @@
 #include <shlwapi.h>
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cwchar>
 #include <new>
@@ -394,6 +396,129 @@ static std::vector<Session> ScanSessions(const std::wstring& folder) {
     return out;
 }
 
+// --- Recent Antigravity CLI conversations of a folder ------------------------
+
+// agy keeps one summary row per conversation in a SQLite file. The system's winsqlite3.dll reads it,
+// loaded on demand so the DLL carries no SQLite of its own.
+using SqliteOpen = int (*)(const char*, void**, int, const char*);
+using SqlitePrepare = int (*)(void*, const char*, int, void**, const char**);
+using SqliteStep = int (*)(void*);
+using SqliteText = const unsigned char* (*)(void*, int);
+using SqliteFree = int (*)(void*);
+constexpr int kSqliteOpenReadOnly = 1;
+constexpr int kSqliteRow = 100;
+
+static std::string WideToUtf8(const std::wstring& s) {
+    int n = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0, nullptr, nullptr);
+    std::string u(n, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), u.data(), n, nullptr, nullptr);
+    return u;
+}
+
+// workspace_uris is a JSON array of file:/// URIs (percent-encoded UTF-8); true if one of them is `folder`.
+static bool InWorkspaces(const std::string& json, const std::wstring& folder) {
+    static const std::string prefix = "file:///";
+    size_t pos = 0;
+    for (;;) {
+        size_t a = json.find('"', pos);
+        if (a == std::string::npos) return false;
+        size_t b = json.find('"', a + 1);
+        if (b == std::string::npos) return false;
+        std::string uri = json.substr(a + 1, b - a - 1);
+        pos = b + 1;
+        if (uri.compare(0, prefix.size(), prefix) != 0) continue;
+        std::string raw;
+        for (size_t i = prefix.size(); i < uri.size(); i++) {
+            if (uri[i] == '%' && i + 2 < uri.size() &&isxdigit((unsigned char)uri[i + 1]) && isxdigit((unsigned char)uri[i + 2])) {
+                raw += (char)strtol(uri.substr(i + 1, 2).c_str(), nullptr, 16);
+                i += 2;
+            } else {
+                raw += uri[i];
+            }
+        }
+        std::wstring path = Utf8ToWide(raw);
+        for (auto& c : path)
+            if (c == L'/') c = L'\\';
+        if (SameFolder(path, folder)) return true;
+    }
+}
+
+// "2026-11-16 12:07:51.8991516+00:00" (the offset is honoured) to a UTC FILETIME.
+static bool ParseDbTime(const std::string& s, FILETIME& out) {
+    int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0, n = 0;
+    if (sscanf_s(s.c_str(), "%d-%d-%d %d:%d:%d%n", &y, &mo, &d, &h, &mi, &sec, &n) != 6) return false;
+    SYSTEMTIME st{};
+    st.wYear = (WORD)y; st.wMonth = (WORD)mo; st.wDay = (WORD)d;
+    st.wHour = (WORD)h; st.wMinute = (WORD)mi; st.wSecond = (WORD)sec;
+    FILETIME ft{};
+    if (!SystemTimeToFileTime(&st, &ft)) return false;
+    size_t i = (size_t)n;
+    if (i < s.size() && s[i] == '.') {
+        i++;
+        while (i < s.size() && isdigit((unsigned char)s[i])) i++;
+    }
+    long long offsetMinutes = 0;
+    int oh = 0, om = 0;
+    if (i < s.size() && (s[i] == '+' || s[i] == '-') && sscanf_s(s.c_str() + i + 1, "%d:%d", &oh, &om) == 2)
+        offsetMinutes = (oh * 60 + om) * (s[i] == '-' ? -1 : 1);
+    ULARGE_INTEGER u{};
+    u.LowPart = ft.dwLowDateTime;
+    u.HighPart = ft.dwHighDateTime;
+    u.QuadPart = (ULONGLONG)((long long)u.QuadPart - offsetMinutes * 60 * 10000000LL);
+    out.dwLowDateTime = u.LowPart;
+    out.dwHighDateTime = u.HighPart;
+    return true;
+}
+
+// The most recent agy conversations that were opened in `folder`, newest first. Sub-agent conversations
+// (they have a parent) are left out. Empty when the database or winsqlite3.dll is missing.
+static std::vector<Session> ScanAgySessions(const std::wstring& folder) {
+    std::vector<Session> out;
+    std::wstring dbPath = EnvPath(L"USERPROFILE", L"\\.gemini\\antigravity-cli\\conversation_summaries.db");
+    if (dbPath.empty() || !FileExists(dbPath)) return out;
+    HMODULE lib = LoadLibraryExW(L"winsqlite3.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!lib) return out;
+    auto open = (SqliteOpen)GetProcAddress(lib, "sqlite3_open_v2");
+    auto prepare = (SqlitePrepare)GetProcAddress(lib, "sqlite3_prepare_v2");
+    auto step = (SqliteStep)GetProcAddress(lib, "sqlite3_step");
+    auto text = (SqliteText)GetProcAddress(lib, "sqlite3_column_text");
+    auto finalize = (SqliteFree)GetProcAddress(lib, "sqlite3_finalize");
+    auto close = (SqliteFree)GetProcAddress(lib, "sqlite3_close");
+    if (open && prepare && step && text && finalize && close) {
+        void* db = nullptr;
+        if (open(WideToUtf8(dbPath).c_str(), &db, kSqliteOpenReadOnly, nullptr) == 0) {
+            void* stmt = nullptr;
+            const char* sql = "SELECT conversation_id, title, last_modified_time, workspace_uris "
+                              "FROM conversation_summaries WHERE parent_conversation_id = '' "
+                              // Never-used conversations carry 0001-01-01. substr keeps the comparison textual:
+                              // the datetime column's numeric affinity would turn a bare '2000' into a number.
+                              "AND substr(last_modified_time, 1, 4) >= '2000' "
+                              "ORDER BY last_modified_time DESC";
+            if (prepare(db, sql, -1, &stmt, nullptr) == 0) {
+                auto col = [&](int i) {
+                    const unsigned char* t = text(stmt, i);
+                    return t ? std::string((const char*)t) : std::string();
+                };
+                while (out.size() < kMaxSessions && step(stmt) == kSqliteRow) {
+                    // The id goes into a command line later, so only a plain UUID is accepted.
+                    std::wstring id = Utf8ToWide(col(0));
+                    if (!IsUuid(id) || !InWorkspaces(col(3), folder)) continue;
+                    std::wstring title = Utf8ToWide(col(1));
+                    if (title.size() > 60) title.resize(IS_HIGH_SURROGATE(title[59]) ? 59 : 60);
+                    FILETIME when{};
+                    std::wstring label = ParseDbTime(col(2), when) ? FormatTime(when) : std::wstring();
+                    if (!title.empty()) label = label.empty() ? title : title + L" - " + label;
+                    out.push_back({id, label});
+                }
+                finalize(stmt);
+            }
+            close(db);
+        }
+    }
+    FreeLibrary(lib);
+    return out;
+}
+
 // --- Windows Terminal's default profile --------------------------------------
 
 struct Profile {
@@ -662,8 +787,10 @@ static HRESULT Launch(Kind kind, const std::wstring& folder, const std::wstring&
     }
     case Kind::Desktop:
         return resumeId.empty() ? LaunchDesktop(folder) : LaunchDesktopResume(resumeId);
-    case Kind::AgyTerminal:
-        return LaunchTerminal(AgyCliPath(), folder, L"", L"");
+    case Kind::AgyTerminal: {
+        std::wstring args = resumeId.empty() ? std::wstring() : L" --conversation " + resumeId;
+        return LaunchTerminal(AgyCliPath(), folder, args, L"");
+    }
     case Kind::Antigravity:
         return LaunchApp(AntigravityAppPath(), folder);
     }
@@ -882,10 +1009,10 @@ private:
 
     // Sessions are read once per folder, the first time the root is asked for its flags.
     bool HasSessions() {
-        // Session submenus list Claude transcripts only.
-        if (folder_.empty() || (kind_ != Kind::Terminal && kind_ != Kind::Desktop)) return false;
+        // The Antigravity app has no way to resume a conversation, so its entry never has a submenu.
+        if (folder_.empty() || kind_ == Kind::Antigravity) return false;
         if (!scanned_) {
-            sessions_ = ScanSessions(folder_);
+            sessions_ = kind_ == Kind::AgyTerminal ? ScanAgySessions(folder_) : ScanSessions(folder_);
             scanned_ = true;
         }
         return !sessions_.empty();

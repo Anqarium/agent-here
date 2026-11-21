@@ -72,8 +72,15 @@ surrogate, not inside Explorer.
 
 Each command is a separate package so Windows does not fold them into one submenu, and
 each can be moved in or out of the main menu on its own under **Settings → Personalization
-→ Context menu → App extensions** (on builds that have that page). The Antigravity entries
-have no recent-sessions submenu and no start prompt; they always open the folder directly.
+→ Context menu → App extensions** (on builds that have that page).
+
+**Open in Antigravity CLI** also opens a submenu (**New session** and the five most recent
+conversations opened in that folder, newest first) once the folder has agy conversations;
+resuming runs `agy --conversation <id>`. They are read from
+`%USERPROFILE%\.gemini\antigravity-cli\conversation_summaries.db` with the system's
+`winsqlite3.dll`. **Open in Antigravity** (the app) has no submenu and always opens the folder
+directly; neither Antigravity entry uses the start prompt. The CLI entry shows the app's icon,
+because `agy.exe` has none of its own.
 
 ## Requirements
 
