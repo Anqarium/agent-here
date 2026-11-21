@@ -908,7 +908,7 @@ public:
         case Kind::Terminal: title = tr ? L"Claude Code'da Aç" : L"Open in Claude Code"; break;
         case Kind::Desktop: title = tr ? L"Claude Masaüstünde Aç" : L"Open in Claude Desktop"; break;
         case Kind::AgyTerminal: title = tr ? L"Antigravity CLI'da Aç" : L"Open in Antigravity CLI"; break;
-        case Kind::Antigravity: title = tr ? L"Antigravity'de Aç" : L"Open in Antigravity"; break;
+        case Kind::Antigravity: title = tr ? L"Antigravity IDE'de Aç" : L"Open in Antigravity IDE"; break;
         }
         return SHStrDupW(title, name);
     }

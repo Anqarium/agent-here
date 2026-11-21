@@ -164,7 +164,7 @@ $commands = @(
      # The IDE's tile has square corners; round them like the Claude CLI's tile (~22 % radius).
      Round = 0.22 },
   @{ Name = 'AgentHere.Antigravity'; Folder = 'Antigravity'; Verb = 'Antigravity'
-     Display = $(if ($tr) { 'Antigravity (sağ tık)' } else { 'Antigravity (context menu)' })
+     Display = $(if ($tr) { 'Antigravity IDE (sağ tık)' } else { 'Antigravity IDE (context menu)' })
      Clsid = '7d7030d2-a5b9-4d8f-bb1e-da9b44981025'; Exe = Find-Antigravity }
 )
 
