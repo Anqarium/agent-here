@@ -72,3 +72,4 @@ Testing/
 .env.*
 .claude/settings.local.json
 *.exp
+CLAUDE.md
